@@ -1,25 +1,8 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/next",
-      "config": {
-        "rootDirectory": "frontend"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "https://gymx-api.onrender.com/api/$1",
-      "headers": {
-        "x-forwarded-host": "$host"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "frontend/$1"
+      "source": "/api/:path*",
+      "destination": "https://gymx-lft3.onrender.com/api/:path*"
     }
   ]
 }
