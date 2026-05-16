@@ -14,8 +14,8 @@ const login = async (req, res, next) => {
     // Set refresh token as HTTP-only cookie
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: true, // Required when sameSite is 'none'
+      sameSite: 'none', // Required for cross-origin (Vercel frontend → Render backend)
       maxAge: result.refreshTokenMaxAge,
       path: '/',
     });
@@ -61,8 +61,8 @@ const logout = async (req, res, next) => {
     // Clear the refresh token cookie
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: true,
+      sameSite: 'none',
       path: '/',
     });
 

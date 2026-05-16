@@ -11,14 +11,27 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Restore session on mount
+  // Restore session on mount + silent token refresh
   useEffect(() => {
-    const stored = localStorage.getItem('staff');
-    const token = localStorage.getItem('accessToken');
-    if (stored && token) {
-      setStaff(JSON.parse(stored));
-    }
-    setLoading(false);
+    const restore = async () => {
+      const stored = localStorage.getItem('staff');
+      const token = localStorage.getItem('accessToken');
+      if (stored && token) {
+        setStaff(JSON.parse(stored));
+        // Try silent token refresh to extend session
+        try {
+          const { data } = await api.post('/auth/refresh', {});
+          if (data?.data?.accessToken) {
+            localStorage.setItem('accessToken', data.data.accessToken);
+          }
+        } catch (e) {
+          // Refresh failed — token may be truly expired, keep current state
+          // User will be redirected to login on next API call that returns 401
+        }
+      }
+      setLoading(false);
+    };
+    restore();
   }, []);
 
   const login = useCallback(async (email, password) => {
