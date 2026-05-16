@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ScanLine, CheckCircle, XCircle, Clock, Wifi, Zap, Shield, AlertTriangle, UserX } from 'lucide-react';
+import { ScanLine, CheckCircle, XCircle, Clock, Wifi, WifiOff, Zap, Shield, AlertTriangle, UserX, RefreshCw } from 'lucide-react';
+import { offlineCheckin, syncPendingCheckins, getPendingCount, syncMembersToOffline, getLastSyncInfo, clearTodayCheckins } from '@/lib/offlineDB';
+import api from '@/lib/api';
 
 // ─── Denial reason → human-readable label + icon mapping ──
 const DENIAL_MAP = {
@@ -16,27 +18,72 @@ const DENIAL_MAP = {
 };
 
 export default function CheckinPage() {
-  const [result, setResult] = useState(null);         // Current scan result
+  const [result, setResult] = useState(null);
   const [inputValue, setInputValue] = useState('');
-  const [scanning, setScanning] = useState(false);     // Loading state during API call
+  const [scanning, setScanning] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [feed, setFeed] = useState([]);
-  const [stats, setStats] = useState({ granted: 0, denied: 0 }); // Session stats
-  const [resultKey, setResultKey] = useState(0);       // Force re-animation
+  const [stats, setStats] = useState({ granted: 0, denied: 0 });
+  const [resultKey, setResultKey] = useState(0);
+  const [pendingSync, setPendingSync] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
   const inputRef = useRef(null);
   const timeoutRef = useRef(null);
 
-  // Auto-detect API URL: when accessed from LAN, use the same hostname
+  // Auto-detect API URL
   const API_BASE = typeof window !== 'undefined'
     ? `http://${window.location.hostname}:5000/api/v1`
     : (process.env.NEXT_PUBLIC_API_URL || '/api/v1');
   const SCANNER_KEY = 'gymx-scanner-api-key-dev-only-change-in-prod';
 
-  // ─── Auto-focus: aggressive on mount, gentle after ──────
+  // ─── Online/Offline detection ─────────────────────────────
   useEffect(() => {
-    // Immediate focus
+    const goOnline = async () => {
+      setIsOnline(true);
+      // Auto-sync pending check-ins when coming back online
+      const count = await getPendingCount();
+      if (count > 0) {
+        setSyncing(true);
+        const { synced } = await syncPendingCheckins(SCANNER_KEY, API_BASE);
+        setPendingSync(await getPendingCount());
+        setSyncing(false);
+      }
+      // Refresh offline member cache
+      syncMembersToOffline(api);
+    };
+    const goOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, [API_BASE, SCANNER_KEY]);
+
+  // ─── Initial sync: cache members for offline use ──────────
+  useEffect(() => {
+    const init = async () => {
+      if (navigator.onLine) {
+        await syncMembersToOffline(api);
+      }
+      const info = await getLastSyncInfo();
+      setLastSync(info);
+      setPendingSync(await getPendingCount());
+
+      // Clear today's offline check-ins at midnight
+      const now = new Date();
+      const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
+      setTimeout(() => clearTodayCheckins(), msUntilMidnight);
+    };
+    init();
+  }, []);
+
+  // ─── Auto-focus ───────────────────────────────────────────
+  useEffect(() => {
     inputRef.current?.focus();
-    // Re-focus on any click outside the input (keeps scanner locked)
     const refocus = (e) => {
       if (e.target !== inputRef.current) {
         setTimeout(() => inputRef.current?.focus(), 50);
@@ -46,15 +93,13 @@ export default function CheckinPage() {
     return () => document.removeEventListener('click', refocus);
   }, []);
 
-  // Re-focus after result clears
   useEffect(() => {
-    if (!result && !scanning) {
-      inputRef.current?.focus();
-    }
+    if (!result && !scanning) inputRef.current?.focus();
   }, [result, scanning]);
 
-  // ─── SSE Live Feed ──────────────────────────────────────
+  // ─── SSE Live Feed ────────────────────────────────────────
   useEffect(() => {
+    if (!isOnline) return;
     const token = localStorage.getItem('accessToken');
     if (!token) return;
 
@@ -69,9 +114,9 @@ export default function CheckinPage() {
     };
     eventSource.onerror = () => setConnected(false);
     return () => eventSource.close();
-  }, [API_BASE]);
+  }, [API_BASE, isOnline]);
 
-  // ─── Sound Effects (Web Audio API — no file needed) ─────
+  // ─── Sound Effects ────────────────────────────────────────
   const playSound = useCallback((type) => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -96,10 +141,10 @@ export default function CheckinPage() {
         osc.start();
         osc.stop(ctx.currentTime + 0.5);
       }
-    } catch (e) { /* no audio context — skip */ }
+    } catch (e) { /* no audio context */ }
   }, []);
 
-  // ─── Process Scan ───────────────────────────────────────
+  // ─── Process Scan (online + offline) ──────────────────────
   const handleScan = useCallback(async (memberId) => {
     const id = memberId.trim();
     if (!id || scanning) return;
@@ -108,17 +153,34 @@ export default function CheckinPage() {
     setResult(null);
 
     try {
-      const res = await fetch(`${API_BASE}/checkin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-scanner-key': SCANNER_KEY,
-        },
-        body: JSON.stringify({ memberId: id }),
-      });
+      let scanResult;
 
-      const data = await res.json();
-      const scanResult = data.data;
+      if (isOnline) {
+        // ── ONLINE: Use server API ──
+        try {
+          const res = await fetch(`${API_BASE}/checkin`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-scanner-key': SCANNER_KEY,
+            },
+            body: JSON.stringify({ memberId: id }),
+          });
+          const data = await res.json();
+          scanResult = data.data;
+        } catch (networkErr) {
+          // Network failed mid-request — fall back to offline
+          console.warn('Network failed, falling back to offline check-in');
+          setIsOnline(false);
+          scanResult = await offlineCheckin(id);
+          setPendingSync(await getPendingCount());
+        }
+      } else {
+        // ── OFFLINE: Use IndexedDB ──
+        scanResult = await offlineCheckin(id);
+        setPendingSync(await getPendingCount());
+      }
+
       setResult(scanResult);
       setResultKey(prev => prev + 1);
 
@@ -128,10 +190,19 @@ export default function CheckinPage() {
         denied: prev.denied + (scanResult.result === 'denied' ? 1 : 0),
       }));
 
-      // Play sound
+      // Add to local feed if offline
+      if (scanResult.offline) {
+        setFeed(prev => [{
+          result: scanResult.result,
+          fullName: scanResult.member?.fullName || 'Unknown',
+          memberId: id,
+          denyReason: scanResult.denyReason,
+          checkedInAt: new Date().toISOString(),
+        }, ...prev].slice(0, 30));
+      }
+
       playSound(scanResult.result);
 
-      // Clear result after 5 seconds (longer for denied — receptionist needs to read)
       clearTimeout(timeoutRef.current);
       const timeout = scanResult.result === 'granted' ? 3000 : 5000;
       timeoutRef.current = setTimeout(() => setResult(null), timeout);
@@ -150,10 +221,8 @@ export default function CheckinPage() {
 
     setInputValue('');
     setScanning(false);
-
-    // Re-focus immediately for next scan
     setTimeout(() => inputRef.current?.focus(), 100);
-  }, [API_BASE, SCANNER_KEY, scanning, playSound]);
+  }, [API_BASE, SCANNER_KEY, scanning, playSound, isOnline]);
 
   // ─── Enter Key Handler ──────────────────────────────────
   const handleKeyDown = (e) => {
@@ -197,18 +266,68 @@ export default function CheckinPage() {
         pointerEvents: 'none',
       }} />
 
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+          padding: '0.5rem 1rem',
+          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+          color: 'white',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+          fontSize: '0.85rem', fontWeight: 700,
+          boxShadow: '0 2px 12px rgba(245,158,11,0.3)',
+        }}>
+          <WifiOff size={16} /> OFFLINE MODE — Check-ins are saved locally
+          {pendingSync > 0 && (
+            <span style={{
+              background: 'rgba(255,255,255,0.25)', padding: '0.15rem 0.5rem',
+              borderRadius: '9999px', fontSize: '0.75rem',
+            }}>
+              {pendingSync} pending sync
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Pending sync banner (online but has unsynced) */}
+      {isOnline && pendingSync > 0 && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+          padding: '0.4rem 1rem',
+          background: 'var(--info-bg)',
+          border: '1px solid var(--info)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+          fontSize: '0.8rem', color: 'var(--info)',
+        }}>
+          <RefreshCw size={14} className={syncing ? 'spinner' : ''} />
+          {syncing ? `Syncing ${pendingSync} check-ins...` : `${pendingSync} check-ins pending sync`}
+          {!syncing && (
+            <button onClick={async () => {
+              setSyncing(true);
+              await syncPendingCheckins(SCANNER_KEY, API_BASE);
+              setPendingSync(await getPendingCount());
+              setSyncing(false);
+            }} style={{
+              background: 'var(--info)', color: 'white', border: 'none',
+              padding: '0.2rem 0.6rem', borderRadius: '4px', cursor: 'pointer',
+              fontSize: '0.75rem', fontWeight: 600,
+            }}>Sync Now</button>
+          )}
+        </div>
+      )}
+
       {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '1.5rem', position: 'relative', zIndex: 1 }}>
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem', position: 'relative', zIndex: 1, marginTop: (!isOnline || pendingSync > 0) ? '2.5rem' : 0 }}>
         <h1 style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>
           <span className="text-gradient">GymX Check-In</span>
         </h1>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: '1rem', fontSize: '0.8rem',
+          gap: '1rem', fontSize: '0.8rem', flexWrap: 'wrap',
         }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: connected ? 'var(--success)' : 'var(--text-muted)' }}>
-            <Wifi size={13} />
-            {connected ? 'Live' : 'Connecting...'}
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: isOnline ? (connected ? 'var(--success)' : 'var(--text-muted)') : 'var(--warning)' }}>
+            {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
+            {isOnline ? (connected ? 'Live' : 'Connecting...') : 'Offline'}
           </span>
           <span style={{ color: 'var(--border)' }}>|</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: 'var(--success)' }}>
@@ -224,6 +343,14 @@ export default function CheckinPage() {
           }}>
             📱 Mobile Scanner
           </a>
+          {lastSync && (
+            <>
+              <span style={{ color: 'var(--border)' }}>|</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                DB: {lastSync.memberCount} members
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -330,6 +457,18 @@ export default function CheckinPage() {
             }}>
               {result.result === 'granted' ? '✅' : getDenialInfo(result.denyReason).icon}
             </div>
+
+            {/* Offline badge */}
+            {result.offline && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                padding: '0.2rem 0.6rem', borderRadius: '9999px',
+                background: 'var(--warning-bg)', color: 'var(--warning)',
+                fontSize: '0.7rem', fontWeight: 700, marginBottom: '0.5rem',
+              }}>
+                <WifiOff size={11} /> OFFLINE — will sync later
+              </div>
+            )}
 
             {/* Member name */}
             <div style={{
