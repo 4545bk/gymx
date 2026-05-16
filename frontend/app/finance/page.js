@@ -77,7 +77,7 @@ export default function FinancePage() {
       {/* Summary Cards */}
       {summary && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div className="stat-card" style={{ borderTop: '3px solid var(--success)' }}>
+          <div className="stat-card stagger-item" style={{ borderTop: '3px solid var(--success)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div className="stat-label">TOTAL INCOME</div>
@@ -88,7 +88,7 @@ export default function FinancePage() {
               </div>
             </div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid var(--danger)' }}>
+          <div className="stat-card stagger-item" style={{ borderTop: '3px solid var(--danger)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div className="stat-label">TOTAL EXPENSES</div>
@@ -99,7 +99,7 @@ export default function FinancePage() {
               </div>
             </div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid var(--accent-primary)' }}>
+          <div className="stat-card stagger-item" style={{ borderTop: '3px solid var(--accent-primary)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div className="stat-label">NET PROFIT</div>

@@ -67,10 +67,10 @@ export default function ReportsPage() {
           {tab === 'Overview' && (
             <>
               <div className="stats-grid">
-                <div className="stat-card blue"><div className="stat-label">Total Active</div><div className="stat-value">{membersReport?.totalActive || 0}</div></div>
-                <div className="stat-card green"><div className="stat-label">Check-ins This Month</div><div className="stat-value">{attendanceReport?.totalCheckins || 0}</div></div>
-                <div className="stat-card cyan"><div className="stat-label">Avg Per Day</div><div className="stat-value">{attendanceReport?.averagePerDay || 0}</div></div>
-                <div className="stat-card amber"><div className="stat-label">Expiring in 7 Days</div><div className="stat-value">{membersReport?.expiringIn7Days || 0}</div></div>
+                <div className="stat-card stagger-item blue"><div className="stat-label">Total Active</div><div className="stat-value">{membersReport?.totalActive || 0}</div></div>
+                <div className="stat-card stagger-item green"><div className="stat-label">Check-ins This Month</div><div className="stat-value">{attendanceReport?.totalCheckins || 0}</div></div>
+                <div className="stat-card stagger-item cyan"><div className="stat-label">Avg Per Day</div><div className="stat-value">{attendanceReport?.averagePerDay || 0}</div></div>
+                <div className="stat-card stagger-item amber"><div className="stat-label">Expiring in 7 Days</div><div className="stat-value">{membersReport?.expiringIn7Days || 0}</div></div>
               </div>
               <div className="grid-2" style={{ marginTop: '1.5rem' }}>
                 <div className="card">
@@ -107,9 +107,9 @@ export default function ReportsPage() {
           {tab === 'Revenue' && revenueData && (
             <>
               <div className="stats-grid">
-                <div className="stat-card blue"><div className="stat-label">Total Revenue</div><div className="stat-value" style={{ fontSize: '1.3rem' }}>{formatCurrency(revenueData.totalRevenue)}</div></div>
-                <div className="stat-card green"><div className="stat-label">Membership Revenue</div><div className="stat-value" style={{ fontSize: '1.3rem', color: 'var(--success)' }}>{formatCurrency(revenueData.totalMembership)}</div></div>
-                <div className="stat-card cyan"><div className="stat-label">Product Sales</div><div className="stat-value" style={{ fontSize: '1.3rem', color: 'var(--accent-secondary)' }}>{formatCurrency(revenueData.totalProduct)}</div></div>
+                <div className="stat-card stagger-item blue"><div className="stat-label">Total Revenue</div><div className="stat-value" style={{ fontSize: '1.3rem' }}>{formatCurrency(revenueData.totalRevenue)}</div></div>
+                <div className="stat-card stagger-item green"><div className="stat-label">Membership Revenue</div><div className="stat-value" style={{ fontSize: '1.3rem', color: 'var(--success)' }}>{formatCurrency(revenueData.totalMembership)}</div></div>
+                <div className="stat-card stagger-item cyan"><div className="stat-label">Product Sales</div><div className="stat-value" style={{ fontSize: '1.3rem', color: 'var(--accent-secondary)' }}>{formatCurrency(revenueData.totalProduct)}</div></div>
               </div>
               <div className="grid-2" style={{ marginTop: '1.5rem' }}>
                 <div className="card">
@@ -152,10 +152,10 @@ export default function ReportsPage() {
           {tab === 'Retention' && retentionData && (
             <>
               <div className="stats-grid">
-                <div className="stat-card red"><div className="stat-label">Churn Rate</div><div className="stat-value">{retentionData.churnRate}%</div></div>
-                <div className="stat-card green"><div className="stat-label">Renewal Rate</div><div className="stat-value">{retentionData.renewalRate}%</div></div>
-                <div className="stat-card amber"><div className="stat-label">At Risk (14d inactive)</div><div className="stat-value">{retentionData.atRiskCount}</div></div>
-                <div className="stat-card blue"><div className="stat-label">Active Members</div><div className="stat-value">{retentionData.totalActive}</div></div>
+                <div className="stat-card stagger-item red"><div className="stat-label">Churn Rate</div><div className="stat-value">{retentionData.churnRate}%</div></div>
+                <div className="stat-card stagger-item green"><div className="stat-label">Renewal Rate</div><div className="stat-value">{retentionData.renewalRate}%</div></div>
+                <div className="stat-card stagger-item amber"><div className="stat-label">At Risk (14d inactive)</div><div className="stat-value">{retentionData.atRiskCount}</div></div>
+                <div className="stat-card stagger-item blue"><div className="stat-label">Active Members</div><div className="stat-value">{retentionData.totalActive}</div></div>
               </div>
               <div className="card" style={{ marginTop: '1.5rem' }}>
                 <div className="card-header"><h3><AlertTriangle size={18} style={{ color: 'var(--warning)', marginRight: '0.5rem' }} />At-Risk Members (no check-in 14+ days)</h3></div>

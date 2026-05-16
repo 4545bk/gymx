@@ -57,7 +57,7 @@ export default function DuesPage() {
       {/* Overview Cards */}
       {overview && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div className="stat-card" style={{ borderTop: '3px solid var(--success)' }}>
+          <div className="stat-card stagger-item" style={{ borderTop: '3px solid var(--success)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
               <CheckCircle size={20} style={{ color: 'var(--success)' }} />
               <span style={{ fontSize: '0.7rem', color: 'var(--success)', fontWeight: 600 }}>+12% vs last month</span>
@@ -65,7 +65,7 @@ export default function DuesPage() {
             <div className="stat-label">PAID MEMBERS</div>
             <div className="stat-value">{overview.counts?.paid || 0}</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid var(--warning)' }}>
+          <div className="stat-card stagger-item" style={{ borderTop: '3px solid var(--warning)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
               <Clock size={20} style={{ color: 'var(--warning)' }} />
             </div>
@@ -73,7 +73,7 @@ export default function DuesPage() {
             <div className="stat-value">{overview.counts?.partial || 0}</div>
             <div style={{ fontSize: '0.75rem', color: 'var(--warning)', marginTop: '0.25rem' }}>{formatPrice(overview.outstandingRevenue?.partial || 0)} Outstanding</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid var(--danger)' }}>
+          <div className="stat-card stagger-item" style={{ borderTop: '3px solid var(--danger)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
               <AlertTriangle size={20} style={{ color: 'var(--danger)' }} />
             </div>
@@ -81,7 +81,7 @@ export default function DuesPage() {
             <div className="stat-value">{overview.counts?.unpaid || 0}</div>
             <div style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem' }}>{formatPrice(overview.outstandingRevenue?.unpaid || 0)} Outstanding</div>
           </div>
-          <div className="stat-card" style={{ borderTop: '3px solid #dc2626' }}>
+          <div className="stat-card stagger-item" style={{ borderTop: '3px solid #dc2626' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
               <DollarSign size={20} style={{ color: '#dc2626' }} />
             </div>

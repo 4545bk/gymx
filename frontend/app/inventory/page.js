@@ -84,7 +84,7 @@ export default function InventoryPage() {
               const cond = conditionBadge(item.condition);
               const needsRepair = item.condition === 'needs-repair';
               return (
-                <div key={item.id || item._id} className={`equipment-card ${needsRepair ? 'needs-repair' : ''}`}>
+                <div key={item.id || item._id} className={`equipment-card stagger-item ${needsRepair ? 'needs-repair' : ''}`}>
                   {/* Header with icon */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                     <div style={{

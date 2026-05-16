@@ -57,10 +57,13 @@
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 30px rgba(167, 139, 250, 0.15);
 
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow: 400ms ease;
+  /* Transitions — Emil Kowalski custom curves */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-fast: 150ms var(--ease-out);
+  --transition-normal: 250ms var(--ease-out);
+  --transition-slow: 400ms var(--ease-in-out);
 
   /* Sidebar */
   --sidebar-width: 260px;
@@ -130,11 +133,13 @@ h4 { font-size: 1.1rem; font-weight: 600; }
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
-  transition: all var(--transition-normal);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal), transform 200ms var(--ease-out);
 }
-.card:hover {
-  border-color: var(--border-hover);
-  box-shadow: var(--shadow-md);
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
+  }
 }
 .card-header {
   display: flex;
@@ -209,12 +214,14 @@ h4 { font-size: 1.1rem; font-weight: 600; }
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform 160ms var(--ease-out), box-shadow 200ms var(--ease-out), background 200ms ease, border-color 200ms ease, opacity 200ms ease;
   white-space: nowrap;
 }
-.btn:hover { transform: translateY(-1px); }
-.btn:active { transform: translateY(0); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { transform: translateY(-1px); }
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 
 .btn-primary {
   background: var(--accent-gradient);
@@ -520,7 +527,7 @@ tr:last-child td { border-bottom: none; }
   font-weight: 500;
   color: var(--text-secondary);
   border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
+  transition: color 150ms ease, background 150ms ease;
   text-decoration: none;
 }
 .nav-link:hover {
@@ -595,7 +602,7 @@ tr:last-child td { border-bottom: none; }
   max-height: 85vh;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
-  animation: slideUp 300ms ease;
+  animation: modalIn 250ms var(--ease-out);
 }
 .modal-header {
   display: flex;
@@ -932,9 +939,64 @@ tr:last-child td { border-bottom: none; }
 
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
-  .topbar-right .btn-secondary { display: none; } /* Hide check-in button on very small screens */
+  .topbar-right .btn-secondary { display: none; }
   h1 { font-size: 1.35rem; }
   h2 { font-size: 1.2rem; }
   h3 { font-size: 1rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Emil Kowalski — Polish Layer
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Modal entry: scale(0.95) + opacity, never scale(0) ── */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Stagger utilities ────────────────────────────────────── */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: staggerIn 350ms var(--ease-out) forwards;
+}
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 50ms; }
+.stagger-item:nth-child(3) { animation-delay: 100ms; }
+.stagger-item:nth-child(4) { animation-delay: 150ms; }
+.stagger-item:nth-child(5) { animation-delay: 200ms; }
+.stagger-item:nth-child(6) { animation-delay: 250ms; }
+.stagger-item:nth-child(7) { animation-delay: 300ms; }
+.stagger-item:nth-child(8) { animation-delay: 350ms; }
+
+@keyframes staggerIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Stat card hover: touch-safe ──────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  .equipment-card:hover {
+    transform: translateY(-2px);
+  }
+  tr:hover td { background: var(--bg-card-hover); }
+}
+
+/* ─── Accessibility: prefers-reduced-motion ───────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .stagger-item {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
 }
 

@@ -87,7 +87,7 @@ export default function AttendancePage() {
 
       {/* Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-primary)' }}>
+        <div className="stat-card stagger-item" style={{ borderLeft: '4px solid var(--accent-primary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div className="stat-label">TOTAL RECORDS</div>
@@ -97,7 +97,7 @@ export default function AttendancePage() {
             <Users size={28} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
           </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--success)' }}>
+        <div className="stat-card stagger-item" style={{ borderLeft: '4px solid var(--success)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div className="stat-label">GRANTED</div>
@@ -109,7 +109,7 @@ export default function AttendancePage() {
             <CheckCircle size={28} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
           </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--danger)' }}>
+        <div className="stat-card stagger-item" style={{ borderLeft: '4px solid var(--danger)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div className="stat-label">DENIED</div>

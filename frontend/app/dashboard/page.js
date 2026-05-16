@@ -102,7 +102,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stats Grid — 6 cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
             <StatCard icon={<Users size={20} />} label="ACTIVE MEMBERS" value={stats?.totalActive || 0}
               badge={`+${stats?.newThisMonth || 0}%`} badgeColor="var(--success)" />
             <StatCard icon={<CalendarCheck size={20} />} label="CHECK-INS TODAY" value={recentCheckins.length || 0}
@@ -122,7 +122,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Content Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '1.5rem' }}>
+          <div className="grid-2" style={{ gridTemplateColumns: '1.8fr 1fr' }}>
             {/* Recent Check-ins */}
             <div className="card">
               <div className="card-header">
@@ -250,7 +250,7 @@ export default function DashboardPage() {
 
 function StatCard({ icon, label, value, badge, badgeColor, badgeStyle }) {
   return (
-    <div className="stat-card" style={{ borderTop: 'none' }}>
+    <div className="stat-card stagger-item" style={{ borderTop: 'none' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
         <div style={{ color: 'var(--text-muted)', opacity: 0.7 }}>{icon}</div>
         {badge && (

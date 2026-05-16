@@ -91,7 +91,7 @@ export default function AlertsPage() {
           {alerts.length > 0 ? alerts.map((a) => {
             const style = getAlertStyle(a.type, a.severity);
             return (
-              <div key={a.id} className={`alert-item ${style.colorClass}`} style={{ opacity: a.isRead ? 0.55 : 1 }}>
+              <div key={a.id} className={`alert-item stagger-item ${style.colorClass}`} style={{ opacity: a.isRead ? 0.55 : 1 }}>
                 {/* Icon circle */}
                 <div style={{
                   width: 40, height: 40, borderRadius: '50%', flexShrink: 0,

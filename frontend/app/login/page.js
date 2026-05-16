@@ -52,7 +52,7 @@ export default function LoginPage() {
         backgroundSize: 'cover', backgroundPosition: 'center', filter: 'grayscale(100%)',
       }} />
 
-      <main style={{ width: '100%', maxWidth: '420px', padding: '0 1rem', zIndex: 10, animation: 'slideUp 500ms ease' }}>
+      <main style={{ width: '100%', maxWidth: '420px', padding: '0 1rem', zIndex: 10, animation: 'modalIn 400ms var(--ease-out, cubic-bezier(0.23,1,0.32,1))' }}>
         {/* Login Card */}
         <div className="glass-card" style={{ padding: '2rem', boxShadow: 'var(--shadow-lg)' }}>
           {/* Logo */}
@@ -154,7 +154,7 @@ export default function LoginPage() {
                 background: 'var(--accent-gradient)', color: '#1a1f35', fontWeight: 700,
                 fontSize: '1.1rem', border: 'none', cursor: 'pointer',
                 boxShadow: '0 4px 15px rgba(207,188,255,0.2)',
-                transition: 'all 200ms ease', opacity: loading ? 0.7 : 1,
+                transition: 'transform 160ms cubic-bezier(0.23,1,0.32,1), box-shadow 200ms ease, opacity 200ms ease', opacity: loading ? 0.7 : 1,
                 fontFamily: 'inherit',
               }}
             >
