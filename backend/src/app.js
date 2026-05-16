@@ -14,12 +14,8 @@ const app = express();
 app.use(helmet());
 
 // ─── CORS ────────────────────────────────────────────────────
-// Extract frontend origin from the API URL (remove /api/v1 path)
-const frontendOrigin = NEXT_PUBLIC_API_URL.replace(/\/api\/v1$/, '');
 app.use(cors({
-  origin: NODE_ENV === 'development'
-    ? true // Allow all origins in development
-    : [frontendOrigin, 'http://localhost:3000'],
+  origin: true, // Allow all origins — auth is handled by JWT, not CORS
   credentials: true, // Required for HTTP-only refresh token cookies
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-scanner-key'],
