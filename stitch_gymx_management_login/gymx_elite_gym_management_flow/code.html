@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GymX - Elite Gym Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "surface-variant": "#36343a",
+                  "background": "#0f1117",
+                  "on-error": "#690005",
+                  "surface-container-low": "#1d1b20",
+                  "secondary-fixed": "#e9ddff",
+                  "on-tertiary-container": "#503d00",
+                  "inverse-surface": "#e6e0e9",
+                  "on-primary": "#381e72",
+                  "tertiary-container": "#c9a74d",
+                  "surface-container-high": "#2b292f",
+                  "on-tertiary": "#3e2e00",
+                  "primary-fixed": "#e9ddff",
+                  "secondary-container": "#4d4465",
+                  "surface-bright": "#3b383e",
+                  "secondary-fixed-dim": "#cdc0e9",
+                  "primary-fixed-dim": "#cfbcff",
+                  "tertiary-fixed-dim": "#e7c365",
+                  "on-surface-variant": "#cbc4d2",
+                  "primary-container": "#6750a4",
+                  "on-tertiary-fixed": "#241a00",
+                  "surface-dim": "#141218",
+                  "tertiary-fixed": "#ffdf93",
+                  "on-primary-fixed-variant": "#4f378a",
+                  "surface-container": "#211f24",
+                  "surface-container-highest": "#36343a",
+                  "on-error-container": "#ffdad6",
+                  "inverse-primary": "#6750a4",
+                  "surface-tint": "#cfbcff",
+                  "surface-container-lowest": "#0f0d13",
+                  "on-background": "#e6e0e9",
+                  "on-secondary-container": "#bfb2da",
+                  "outline": "#948e9c",
+                  "on-primary-container": "#e0d2ff",
+                  "tertiary": "#e7c365",
+                  "secondary": "#cdc0e9",
+                  "primary": "#cfbcff",
+                  "on-surface": "#e6e0e9",
+                  "error-container": "#93000a",
+                  "on-secondary-fixed-variant": "#4b4263",
+                  "error": "#ffb4ab",
+                  "on-secondary-fixed": "#1f1635",
+                  "outline-variant": "#494551",
+                  "on-primary-fixed": "#22005d",
+                  "on-secondary": "#342b4b",
+                  "on-tertiary-fixed-variant": "#594400",
+                  "inverse-on-surface": "#322f35",
+                  "surface": "#141218",
+                  "gym-accent-start": "#3b82f6",
+                  "gym-accent-end": "#06b6d4"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "full": "9999px"
+          },
+          "spacing": {
+                  "xxl": "4rem",
+                  "gutter": "1.5rem",
+                  "md": "1rem",
+                  "lg": "1.5rem",
+                  "xs": "0.25rem",
+                  "xl": "2rem",
+                  "sm": "0.5rem",
+                  "margin_safe": "2rem"
+          },
+          "fontFamily": {
+                  "display-xl": ["Inter"],
+                  "body-lg": ["Inter"],
+                  "headline-lg": ["Inter"],
+                  "headline-md": ["Inter"],
+                  "label-sm": ["Inter"],
+                  "body-md": ["Inter"]
+          },
+          "fontSize": {
+                  "display-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                  "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                  "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                  "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                  "label-sm": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                  "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background-color: #0f1117;
+    }
+    .glass-effect {
+      background: rgba(26, 29, 39, 0.7);
+      backdrop-filter: blur(12px);
+      border: 0.5px solid rgba(255, 255, 255, 0.08);
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      font-size: 20px;
+    }
+    .glow-accent {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    }
+    .pulse-cyan {
+      box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4);
+      animation: pulse-cyan 2s infinite;
+    }
+    @keyframes pulse-cyan {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(6, 182, 212, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+    }
+  </style>
+</head>
+<body class="text-on-background min-h-screen">
+<main class="flex min-h-screen flex-col md:flex-row">
+<!-- Left Section: Visual Identity -->
+<section class="relative w-full md:w-1/2 flex flex-col items-center justify-center p-xl overflow-hidden bg-gradient-to-br from-background to-[#1a1d27]">
+<!-- Background Ambient Light -->
+<div class="absolute top-1/4 -left-1/4 w-96 h-96 bg-gym-accent-start/10 blur-[100px] rounded-full"></div>
+<div class="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-gym-accent-end/10 blur-[100px] rounded-full"></div>
+<div class="relative z-10 flex flex-col items-center text-center space-y-md">
+<!-- Glowing Dumbbell Icon -->
+<div class="mb-lg transform hover:scale-105 transition-transform duration-500">
+<img alt="GymX Logo Icon" class="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_0_30px_rgba(6,182,212,0.5)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClsBFP994vFyEtrOscPoIhWaVGKtbZH46eYFcTVIwI1Q0KVVaqky-i5YgHBEemm0On0OLhKuBqMboS34IeWKsY3e2ALMFZJ1TgrDjC97mzgEjcHEyWnSjkQxN8OiKJyOEfeQG8eg9tJ76xYH1pd12_kOhG-LDAb1tBJc4fdAbAftA1S0eV3ttYqOmdtYQjY4uhiX9EiZzcbsfbgcZXm-qGA8OhfFzViw74qo3X_R_yOL27p97qjS8t2Q4ovypf_FIDJi5ysL9JUGpy"/>
+</div>
+<!-- Brand Logo -->
+<div class="mb-sm">
+<img alt="GymX Brand Logo" class="h-12 md:h-16 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeHAiE5WwmOCx306gehwe0_bfRqTjF7TMLKn5vhvFc0VnSZntmE03l8twCRRmq7-pTzHiE4bXzkpIskMRmcWatyozmK8sQ8WFPaUdV91UQtV0aPDfhtRA7mkP0hpA4Db9rjayTE8cW7hAiibKYylXybk8n6B3CaHxRbajPRFsdaTV8hGim_afnIOS8tlZnY98ZvAIuFw378_nK4GmnOAx9lvj9wTzJbEQtCHXuAxSusT-lfUY5NXPfDhcSWXGR8JLI8-VocMovcMTS"/>
+</div>
+<!-- Tagline -->
+<div class="space-y-xs">
+<h2 class="font-headline-md text-headline-md text-on-background tracking-wide">
+            Gym Management System
+          </h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-sm mx-auto opacity-70">
+            Empowering Ethiopian fitness facilities with precision data and elite membership control.
+          </p>
+</div>
+<!-- Real-time Indicator -->
+<div class="mt-xl flex items-center gap-sm px-md py-xs rounded-full bg-surface-container-high border border-outline-variant/30">
+<div class="w-2 h-2 rounded-full bg-gym-accent-end pulse-cyan"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Live Network Active</span>
+</div>
+</div>
+</section>
+<!-- Right Section: Login Form -->
+<section class="w-full md:w-1/2 flex items-center justify-center p-gutter md:p-xxl bg-[#0d0f14]">
+<div class="w-full max-w-md glass-effect p-xl rounded-xl space-y-lg relative">
+<!-- Header Text -->
+<div class="space-y-xs">
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Administrative Portal</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Access your facility dashboard and member analytics.</p>
+</div>
+<!-- Form -->
+<form action="#" class="space-y-lg">
+<!-- Email Input -->
+<div class="space-y-xs">
+<label class="font-label-sm text-label-sm text-on-surface-variant px-xs" for="email">OFFICIAL EMAIL</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-gym-accent-start transition-colors">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+</div>
+<input class="w-full pl-[3.5rem] pr-md py-md bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface font-body-md placeholder:text-on-surface-variant/40 focus:outline-none focus:border-gym-accent-start focus:ring-1 focus:ring-gym-accent-start transition-all" id="email" name="email" placeholder="admin@gymx.et" type="email"/>
+</div>
+</div>
+<!-- Password Input -->
+<div class="space-y-xs">
+<label class="font-label-sm text-label-sm text-on-surface-variant px-xs" for="password">PASSWORD</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-md flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-gym-accent-start transition-colors">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+</div>
+<input class="w-full pl-[3.5rem] pr-[3.5rem] py-md bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface font-body-md placeholder:text-on-surface-variant/40 focus:outline-none focus:border-gym-accent-start focus:ring-1 focus:ring-gym-accent-start transition-all" id="password" name="password" placeholder="••••••••••••" type="password"/>
+<button class="absolute inset-y-0 right-0 pr-md flex items-center text-on-surface-variant hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center justify-between">
+<label class="flex items-center gap-sm cursor-pointer">
+<input class="w-4 h-4 rounded border-outline-variant bg-surface-container-low text-gym-accent-start focus:ring-gym-accent-start" type="checkbox"/>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Remember device</span>
+</label>
+<a class="font-label-sm text-label-sm text-gym-accent-end hover:underline" href="#">Forgot access key?</a>
+</div>
+<!-- Sign In Button -->
+<button class="w-full py-lg rounded-xl bg-gradient-to-r from-gym-accent-start to-gym-accent-end text-white font-headline-md text-body-lg font-bold hover:brightness-110 active:scale-[0.98] transition-all glow-accent flex items-center justify-center gap-sm" type="submit">
+<span>Sign In to Dashboard</span>
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</form>
+<!-- Social/Secondary Login Option -->
+<div class="pt-lg border-t border-outline-variant/20 flex flex-col items-center gap-md">
+<p class="font-label-sm text-label-sm text-on-surface-variant/60 uppercase">Management Access Only</p>
+<div class="flex gap-md">
+<button class="px-lg py-sm rounded-lg border border-outline-variant/50 hover:bg-surface-variant/20 transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined" data-icon="id_card">id_card</span>
+<span class="font-label-sm text-label-sm">Biometric Scan</span>
+</button>
+</div>
+</div>
+<!-- Form Footer -->
+<div class="text-center pt-md">
+<span class="font-label-sm text-label-sm text-on-surface-variant/40">GymX v1.0.0 Elite Edition</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Global Footer Component -->
+<footer class="fixed bottom-0 w-full z-50 flex justify-center items-center gap-md py-lg bg-transparent">
+<div class="flex flex-col md:flex-row items-center gap-md md:gap-xl">
+<div class="font-label-sm text-label-sm text-on-surface-variant/50">GymX v2.4.0 Elite Edition</div>
+<div class="flex items-center gap-lg">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Support</a>
+</div>
+</div>
+</footer>
+</body></html>

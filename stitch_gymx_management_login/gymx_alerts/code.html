@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GymX Alerts | High-Performance Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0a0e1a;
+            font-family: 'Inter', sans-serif;
+            color: #e6e0e9;
+        }
+        .glass-card {
+            background: #1a1f35;
+            border: 1px solid #1e293b;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-variant": "#36343a",
+                      "inverse-on-surface": "#322f35",
+                      "inverse-primary": "#6750a4",
+                      "on-secondary-fixed-variant": "#4b4263",
+                      "surface-container-highest": "#36343a",
+                      "outline": "#948e9c",
+                      "error-container": "#93000a",
+                      "on-tertiary-fixed-variant": "#594400",
+                      "surface-dim": "#141218",
+                      "on-primary": "#381e72",
+                      "tertiary-container": "#c9a74d",
+                      "secondary": "#cdc0e9",
+                      "secondary-fixed-dim": "#cdc0e9",
+                      "on-tertiary-fixed": "#241a00",
+                      "surface-tint": "#cfbcff",
+                      "background": "#141218",
+                      "surface-bright": "#3b383e",
+                      "outline-variant": "#494551",
+                      "on-primary-fixed": "#22005d",
+                      "tertiary-fixed": "#ffdf93",
+                      "surface-container": "#211f24",
+                      "surface": "#141218",
+                      "primary-fixed-dim": "#cfbcff",
+                      "tertiary-fixed-dim": "#e7c365",
+                      "on-surface-variant": "#cbc4d2",
+                      "error": "#ffb4ab",
+                      "primary-container": "#6750a4",
+                      "surface-container-lowest": "#0f0d13",
+                      "on-surface": "#e6e0e9",
+                      "secondary-container": "#4d4465",
+                      "on-tertiary-container": "#503d00",
+                      "on-background": "#e6e0e9",
+                      "secondary-fixed": "#e9ddff",
+                      "on-tertiary": "#3e2e00",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary": "#342b4b",
+                      "on-primary-fixed-variant": "#4f378a",
+                      "on-error": "#690005",
+                      "primary": "#cfbcff",
+                      "primary-fixed": "#e9ddff",
+                      "on-secondary-container": "#bfb2da",
+                      "surface-container-low": "#1d1b20",
+                      "tertiary": "#e7c365",
+                      "surface-container-high": "#2b292f",
+                      "on-primary-container": "#e0d2ff",
+                      "inverse-surface": "#e6e0e9",
+                      "on-secondary-fixed": "#1f1635"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "base": "4px",
+                      "container-max": "1440px",
+                      "margin-mobile": "16px",
+                      "margin-desktop": "40px"
+              },
+              "fontFamily": {
+                      "headline-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "display": ["Inter"],
+                      "label-sm": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "display": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                      "label-sm": ["13px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="flex min-h-screen">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-surface-dim/80 backdrop-blur-xl border-r border-outline-variant/30 shadow-2xl flex flex-col py-base z-50">
+<div class="px-gutter py-8">
+<h1 class="font-display text-display bg-gradient-to-r from-primary to-tertiary bg-clip-text text-transparent text-3xl">GymX</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant tracking-widest mt-1">ELITE MANAGEMENT</p>
+</div>
+<nav class="flex-1 px-4 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-highest transition-colors transition-transform active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-highest transition-colors transition-transform active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-label-sm text-label-sm">Management</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-primary font-bold border-r-4 border-primary bg-primary/10 transition-transform active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">settings_applications</span>
+<span class="font-label-sm text-label-sm">Operations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-highest transition-colors transition-transform active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-sm text-label-sm">Commerce</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-highest transition-colors transition-transform active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="font-label-sm text-label-sm">Admin</span>
+</a>
+</nav>
+<div class="px-4 py-6 border-t border-outline-variant/10">
+<button class="w-full bg-primary text-on-primary font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined">add</span>
+<span>New Entry</span>
+</button>
+<div class="mt-6 space-y-2">
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:underline text-sm" href="#">
+<span class="material-symbols-outlined text-sm">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:underline text-sm" href="#">
+<span class="material-symbols-outlined text-sm">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-64 flex flex-col">
+<!-- TopNavBar Anchor -->
+<header class="sticky top-0 w-full bg-surface/50 backdrop-blur-lg border-b border-outline-variant/20 shadow-md flex justify-between items-center px-gutter h-16 z-40">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-md text-headline-md text-on-surface">Alerts</h2>
+<div class="px-2 py-0.5 bg-error-container text-on-error-container rounded-full text-[10px] font-bold uppercase tracking-wider">
+                    7 unread
+                </div>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-lg">done_all</span>
+                    Mark All Read
+                </button>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer opacity-80">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer opacity-80">mail</span>
+<div class="flex items-center gap-3 bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant/30">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+<span class="text-xs font-bold text-on-surface">Admin</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="max-w-[1000px] w-full mx-auto px-gutter py-10 space-y-8">
+<!-- Filters -->
+<div class="flex items-center gap-3">
+<button class="px-6 py-2 bg-primary text-on-primary rounded-full font-label-sm text-label-sm shadow-lg shadow-primary/20">All</button>
+<button class="px-6 py-2 bg-surface-container text-on-surface-variant hover:bg-surface-container-highest rounded-full font-label-sm text-label-sm transition-colors">Unread</button>
+<button class="px-6 py-2 bg-surface-container text-on-surface-variant hover:bg-surface-container-highest rounded-full font-label-sm text-label-sm transition-colors">Membership</button>
+<button class="px-6 py-2 bg-surface-container text-on-surface-variant hover:bg-surface-container-highest rounded-full font-label-sm text-label-sm transition-colors">Maintenance</button>
+<button class="px-6 py-2 bg-surface-container text-on-surface-variant hover:bg-surface-container-highest rounded-full font-label-sm text-label-sm transition-colors">Payment</button>
+</div>
+<!-- Alerts List -->
+<div class="space-y-4">
+<!-- Alert 1: Warning -->
+<div class="glass-card rounded-xl overflow-hidden border-l-[3px] border-l-[#f59e0b] flex items-center p-5 gap-5 bg-primary/5">
+<div class="relative">
+<div class="w-12 h-12 rounded-full bg-[#f59e0b]/10 flex items-center justify-center text-[#f59e0b]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#1a1f35]"></div>
+</div>
+<div class="flex-1">
+<p class="text-[0.9rem] font-semibold text-white">Selam Tesfaye's membership expires in 3 days</p>
+<div class="flex items-center gap-3 mt-1.5">
+<span class="px-2 py-0.5 rounded bg-[#f59e0b]/10 text-[#f59e0b] text-[10px] font-bold uppercase tracking-wider">membership-expiring</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">May 3, 2026 — 2 days ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors" title="Mark Read">
+<span class="material-symbols-outlined text-xl">check_circle</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-error transition-colors" title="Dismiss">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+</div>
+<!-- Alert 2: Warning -->
+<div class="glass-card rounded-xl overflow-hidden border-l-[3px] border-l-[#f59e0b] flex items-center p-5 gap-5 bg-primary/5">
+<div class="relative">
+<div class="w-12 h-12 rounded-full bg-[#f59e0b]/10 flex items-center justify-center text-[#f59e0b]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">handyman</span>
+</div>
+<div class="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#1a1f35]"></div>
+</div>
+<div class="flex-1">
+<p class="text-[0.9rem] font-semibold text-white">Treadmill #3 is due for service in 5 days</p>
+<div class="flex items-center gap-3 mt-1.5">
+<span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider">maintenance-due</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">May 3, 2026 — 2 days ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors" title="Mark Read">
+<span class="material-symbols-outlined text-xl">check_circle</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-error transition-colors" title="Dismiss">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+</div>
+<!-- Alert 3: Critical -->
+<div class="glass-card rounded-xl overflow-hidden border-l-[3px] border-l-[#ef4444] flex items-center p-5 gap-5 bg-primary/5">
+<div class="relative">
+<div class="w-12 h-12 rounded-full bg-[#ef4444]/10 flex items-center justify-center text-[#ef4444]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">error</span>
+</div>
+<div class="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#1a1f35]"></div>
+</div>
+<div class="flex-1">
+<p class="text-[0.9rem] font-semibold text-white">Abebe Girma's membership expired yesterday</p>
+<div class="flex items-center gap-3 mt-1.5">
+<span class="px-2 py-0.5 rounded bg-[#ef4444]/10 text-[#ef4444] text-[10px] font-bold uppercase tracking-wider">membership-expired</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">May 4, 2026 — 1 day ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors" title="Mark Read">
+<span class="material-symbols-outlined text-xl">check_circle</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-error transition-colors" title="Dismiss">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+</div>
+<!-- Alert 4: Warning Payment -->
+<div class="glass-card rounded-xl overflow-hidden border-l-[3px] border-l-[#f59e0b] flex items-center p-5 gap-5 bg-primary/5">
+<div class="relative">
+<div class="w-12 h-12 rounded-full bg-[#f59e0b]/10 flex items-center justify-center text-[#f59e0b]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+<div class="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#1a1f35]"></div>
+</div>
+<div class="flex-1">
+<p class="text-[0.9rem] font-semibold text-white">5 members have overdue payments</p>
+<div class="flex items-center gap-3 mt-1.5">
+<span class="px-2 py-0.5 rounded bg-[#ef4444]/10 text-[#ef4444] text-[10px] font-bold uppercase tracking-wider">payment-overdue</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">May 5, 2026 — 4 hours ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors" title="Mark Read">
+<span class="material-symbols-outlined text-xl">check_circle</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-error transition-colors" title="Dismiss">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+</div>
+<!-- Alert 5: Info (Read) -->
+<div class="glass-card rounded-xl overflow-hidden border-l-[3px] border-l-[#3b82f6] flex items-center p-5 gap-5 opacity-60 grayscale-[0.2]">
+<div>
+<div class="w-12 h-12 rounded-full bg-[#3b82f6]/10 flex items-center justify-center text-[#3b82f6]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">info</span>
+</div>
+</div>
+<div class="flex-1">
+<p class="text-[0.9rem] font-semibold text-white">Meron Hailu's plan renewed successfully</p>
+<div class="flex items-center gap-3 mt-1.5">
+<span class="px-2 py-0.5 rounded bg-green-500/10 text-green-400 text-[10px] font-bold uppercase tracking-wider">membership-renewed</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">May 5, 2026 — 1 hour ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-primary cursor-default" title="Already Read">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</button>
+</div>
+</div>
+<!-- Alert 6: Warning Maintenance -->
+<div class="glass-card rounded-xl overflow-hidden border-l-[3px] border-l-[#f59e0b] flex items-center p-5 gap-5 bg-primary/5">
+<div class="relative">
+<div class="w-12 h-12 rounded-full bg-[#f59e0b]/10 flex items-center justify-center text-[#f59e0b]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">construction</span>
+</div>
+<div class="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#1a1f35]"></div>
+</div>
+<div class="flex-1">
+<p class="text-[0.9rem] font-semibold text-white">Rowing Machine maintenance overdue by 3 days</p>
+<div class="flex items-center gap-3 mt-1.5">
+<span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider">maintenance-due</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">May 5, 2026 — Just now</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors" title="Mark Read">
+<span class="material-symbols-outlined text-xl">check_circle</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-error transition-colors" title="Dismiss">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+</div>
+<!-- Alert 7: Info System (Read) -->
+<div class="glass-card rounded-xl overflow-hidden border-l-[3px] border-l-[#3b82f6] flex items-center p-5 gap-5 opacity-60 grayscale-[0.2]">
+<div>
+<div class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">BellRinging</span>
+</div>
+</div>
+<div class="flex-1">
+<p class="text-[0.9rem] font-semibold text-white">Monthly expiry sync completed — 12 members marked expired</p>
+<div class="flex items-center gap-3 mt-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-bold uppercase tracking-wider">system</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">May 1, 2026 — 4 days ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-primary cursor-default" title="Already Read">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Empty State / Load More Visual -->
+<div class="flex flex-col items-center justify-center py-10 opacity-30">
+<span class="material-symbols-outlined text-6xl mb-4">notifications_off</span>
+<p class="font-label-sm text-label-sm">NO MORE RECENT ALERTS</p>
+</div>
+</div>
+<!-- Footer Anchor -->
+<footer class="mt-auto w-full bg-surface-container-lowest border-t border-outline-variant/10 flex justify-between items-center px-gutter py-4 ml-64">
+<div class="flex items-center gap-6">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:underline transition-colors" href="#">Documentation</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:underline transition-colors" href="#">Support</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:underline transition-colors" href="#">Legal</a>
+</div>
+<p class="font-label-sm text-label-sm text-secondary">© 2024 GymX Systems. v2.4.0 (ETB)</p>
+</footer>
+</main>
+<!-- Contextual FAB (Hidden on Alerts Page as per prompt suppression rule for sub-pages, but included for system structure if needed elsewhere) -->
+</body></html>

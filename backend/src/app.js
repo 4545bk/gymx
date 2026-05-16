@@ -1,0 +1,60 @@
+/**
+ * Express application setup.
+ * Middleware chain: helmet → cors → cookie-parser → JSON parser → API routes → error handler.
+ */
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const { NODE_ENV, NEXT_PUBLIC_API_URL } = require('./config/env');
+
+const app = express();
+
+// ─── Security Headers ────────────────────────────────────────
+app.use(helmet());
+
+// ─── CORS ────────────────────────────────────────────────────
+// Extract frontend origin from the API URL (remove /api/v1 path)
+const frontendOrigin = NEXT_PUBLIC_API_URL.replace(/\/api\/v1$/, '');
+app.use(cors({
+  origin: NODE_ENV === 'development'
+    ? true // Allow all origins in development
+    : [frontendOrigin, 'http://localhost:3000'],
+  credentials: true, // Required for HTTP-only refresh token cookies
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-scanner-key'],
+}));
+
+// ─── Body Parsing ────────────────────────────────────────────
+app.use(cookieParser());
+app.use(express.json({ limit: '50mb' })); // 50mb to support backup restore uploads
+
+// ─── Health Check ────────────────────────────────────────────
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// ─── Rate Limiting ───────────────────────────────────────────
+const { apiLimiter } = require('./middleware/rateLimiter');
+app.use('/api', apiLimiter);
+
+// ─── API Routes ──────────────────────────────────────────────
+const apiRouter = require('./routes');
+app.use('/api/v1', apiRouter);
+
+// ─── 404 Handler ─────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: 'NOT_FOUND',
+      message: `Route ${req.method} ${req.originalUrl} not found`,
+    },
+  });
+});
+
+// ─── Global Error Handler ────────────────────────────────────
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
+
+module.exports = app;

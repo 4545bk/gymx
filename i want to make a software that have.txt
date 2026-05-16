@@ -1,0 +1,1666 @@
+i want to make a software that have a standout automation and great for gym which they have a process of registering tranees(gym users) so they have a plan which is 3 days and all the week and it have a different price and all things are manual but i needed to change this to make automated like instead of paper id they will use a digital id which have a qr code so that they will scan it whenever try to enter to the gym and that thing immideately records that the user gets a gym at that day and also i want a good software which thy can record everyting tranees trainers their enventory , their finiantial thing, everything besically professional gym softwares contain so lets discuss on it
+
+May 6
+Claude responded: I love this project idea!
+I love this project idea! Let me ask a few quick questions to make sure we design exactly what you need.
+
+You said: Q: How many active trainees does this gym currently have (or expect to have)?
+Q: How many active trainees does this gym currently have (or expect to have)?
+A: up to 5000
+
+Q: Who will be using this software day-to-day? (Select all that apply)
+A: Gym owner / manager, Receptionist / admin staff, Trainers
+
+Q: What's your preferred platform for the main dashboard?
+A: Not sure yet
+
+May 6
+Claude responded: Great answers!
+Great answers! A few more to nail down the scope.
+
+You said: Q: For the QR code check-in — how will trainees scan?
+Q: For the QR code check-in — how will trainees scan? 
+A: A dedicated QR scanner device
+
+Q: For payments & finance, what do you need? (Select all that apply)
+A: Track membership fees & renewals, Record expenses (equipment, salaries), Generate financial reports
+
+Q: Do you want this built from scratch, or are you open to a recommendation on the best tech stack to use?
+A: lets discuss on it i mean about the features the functionalites and what should be included what should be removed
+
+May 6
+Claude responded: Perfect.
+Perfect. Let me lay out the full system blueprint for you — everything a professional gym management software at your scale (up to 5,000 trainees) should include, so we can discuss, trim, or expand together.
+
+
+
+Here's the complete picture. Let me walk you through each module and why it's included.
+
+The 7 core modules:
+
+QR Check-in — this is your star automation. Every trainee gets a digital profile with a unique QR code. When they arrive, the dedicated scanner reads it instantly, records the visit with a timestamp, and checks if their membership is still active. No paper, no manual logging, no staff needed at the door for check-in.
+
+Member management — full trainee profiles: name, photo, contact info, plan type (3-day or full-week), start and expiry date, payment status, and their generated QR ID. Staff can register new trainees, renew memberships, and see everything about a member in one place.
+
+Trainer management — profiles for every trainer, their assigned trainees, their session logs, and salary records. This lets you track who is doing what and hold everyone accountable.
+
+Finance & billing — tracks all incoming payments (membership fees) and outgoing expenses (equipment, salaries, utilities). Sends alerts for overdue payments. Generates a monthly profit and loss summary so you always know if the gym is making money.
+
+Inventory — a digital log of all equipment with its condition, last maintenance date, and scheduled next check. Alerts you when something needs repair or replacement.
+
+Attendance & Financial Reports — both reporting modules pull from the data the other modules collect automatically. No extra work — the system generates charts and summaries for you.
+
+4 optional features I'd suggest for later:
+
+A trainee self-service app lets members check their own attendance and plan status from their phone. Online payments (via a service like Stripe or Chapa for Ethiopia) would eliminate cash handling. SMS/email reminders would automatically notify members when their plan is about to expire. Class scheduling would work if you ever add group sessions.
+
+So — which modules are clear to you, and which ones do you want to dig deeper on? Or shall we talk about the tech stack next?
+
+You said: You are a senior software architect.
+You are a senior software architect.
+I am building a professional gym management system for up to 5000 active members. The system must be scalable, fast, and production-ready.
+Tech stack:
+
+Frontend: Next.js
+Backend: Node.js (Express)
+Database: MongoDB
+Core requirements:
+
+QR-based check-in system using a hardware scanner
+Member registration with QR code generation
+Smart access control (validate membership, allowed days, expiry)
+Attendance tracking
+Staff roles (owner, receptionist, trainer)
+Manual payment recording (no payment gateway)
+Inventory tracking
+Internal alert system for receptionist and owner (no user notifications)
+Important constraints:
+
+System must respond to QR scans in under 1 second
+Must handle up to 5000 members efficiently
+Must be simple but scalable (no overengineering)
+Task: Design a COMPLETE system architecture.
+Include:
+
+High-level architecture (how frontend, backend, and DB interact)
+Key modules and their responsibilities
+Data flow for QR check-in
+Scalability considerations
+Security considerations
+Suggested folder structure (high-level, not code yet) Do NOT write code yet. Focus only on architecture and design.
+Show more
+May 6
+Claude responded: This is a well-scoped architecture problem.
+This is a well-scoped architecture problem. I'll give you the full design across all six areas — starting with the high-level picture, then drilling into each concern. Three diagrams will map it all out.
+
+1. High-level architecture
+The system follows a clean three-tier architecture. The Next.js frontend communicates exclusively with the Express API layer. The API layer owns all business logic and is the only thing that touches MongoDB. The QR scanner is a hardware device on the local network that talks to a single dedicated endpoint — it never touches the frontend.
+
+
+
+2. Key modules and responsibilities
+Module	Responsibility
+auth	JWT issuance, refresh tokens, role enforcement (owner / receptionist / trainer)
+members	Register trainees, generate QR codes, manage plan type and expiry
+check-in	Validate QR scan: membership active? plan covers today? not already checked in? Write attendance record
+attendance	Read/query attendance logs, daily summaries, per-member history
+staff	Trainer profiles, schedules, salary records
+finance	Record payments received, log expenses, generate P&L summary
+inventory	Equipment list, condition tracking, maintenance schedule
+alerts	Internal notification queue for receptionist/owner — expiring memberships, overdue payments, maintenance due
+reports	Aggregation queries served to the dashboard — revenue, attendance trends, peak hours
+3. QR check-in data flow
+This is the most latency-sensitive path in the entire system. Every decision here is made to hit that sub-1-second target.
+
+
+
+The key architectural decision here is the Redis cache. When the scanner hits the API, you look up the member in Redis first — this is an in-memory operation that takes under 5ms. MongoDB is only touched on a cache miss. The TTL on each Redis record should be 24 hours, refreshed whenever a member's data changes. This means at peak morning rush (50 people scanning in 10 minutes), MongoDB sees almost zero load from check-ins.
+
+The scanner authenticates using a static API key (a long random string stored in the environment). No JWT, no login — it's a machine credential. The API key is validated as the very first middleware so invalid requests are rejected at the edge before any database work happens.
+
+4. Scalability considerations
+At 5,000 members with realistic gym usage patterns (perhaps 300–500 check-ins on a busy day), MongoDB with proper indexing is completely sufficient. The critical indexes are:
+
+members collection: index on memberId (the QR token — this is the hot path), index on phone and name for receptionist search
+attendance collection: compound index on { memberId, date } — both for duplicate-check queries and for reporting
+payments collection: index on { memberId, date }
+No sharding, no replica sets needed at launch. If you ever hit 50,000+ members, adding a MongoDB replica set is a single config change. The Redis cache is the real scalability lever — it decouples your busiest operation (check-in) from your database entirely.
+
+On the API side, Node.js with Express is single-process by default. Use the Node.js cluster module or PM2 in cluster mode to spawn one worker per CPU core. This gives you horizontal scaling on a single server with zero infrastructure changes.
+
+5. Security considerations
+Three layers of security matter here:
+
+Authentication uses JWT with short-lived access tokens (15 minutes) and refresh tokens (7 days) stored in HTTP-only cookies. Never store JWTs in localStorage. Each token payload carries { userId, role } — the role guard middleware checks this on every protected route before the request reaches the controller.
+
+Role permissions should be enforced at the API level, not just the frontend. The frontend hiding a button is UX — the API refusing the request is security. A receptionist token must be rejected by the API if it tries to access owner-only endpoints like financial reports or staff salary data.
+
+The QR code itself should encode a unique memberId (a UUID, not the MongoDB _id) that is stable across the member's lifetime. Never encode anything sensitive in the QR. The value is meaningless to an attacker because the API key that the scanner uses to call the check-in endpoint is the actual credential — the memberId alone does nothing.
+
+Input validation with a library like Zod on every request body. MongoDB injection is a real concern — never pass raw user input into a query without schema validation first.
+
+6. Folder structure
+/gym-system
+│
+├── /frontend                   (Next.js)
+│   ├── /app
+│   │   ├── /(auth)             login page
+│   │   ├── /dashboard          owner home
+│   │   ├── /members            list, detail, register
+│   │   ├── /checkin            live check-in monitor
+│   │   ├── /finance            payments, expenses
+│   │   ├── /staff              trainer management
+│   │   ├── /inventory          equipment
+│   │   └── /reports            charts and exports
+│   ├── /components             shared UI components
+│   ├── /lib                    API client, auth helpers
+│   └── /types                  shared TypeScript types
+│
+├── /backend                    (Express)
+│   ├── /src
+│   │   ├── /config             DB, Redis, env
+│   │   ├── /middleware         auth, roleGuard, errorHandler
+│   │   ├── /modules
+│   │   │   ├── /auth           routes, controller, service
+│   │   │   ├── /members        routes, controller, service
+│   │   │   ├── /checkin        routes, controller, service
+│   │   │   ├── /attendance     routes, controller, service
+│   │   │   ├── /staff          routes, controller, service
+│   │   │   ├── /finance        routes, controller, service
+│   │   │   ├── /inventory      routes, controller, service
+│   │   │   ├── /alerts         routes, controller, service
+│   │   │   └── /reports        routes, controller, service
+│   │   ├── /models             Mongoose schemas
+│   │   ├── /utils              QR generator, date helpers
+│   │   └── app.js              Express setup
+│   └── /tests
+│
+└── /shared                     (optional — shared TS types)
+Each module under /modules follows the same internal pattern: routes.js defines the endpoints, controller.js handles request/response, service.js contains the actual business logic. This separation means your business logic is independently testable without spinning up HTTP.
+
+The architecture is intentionally lean. Redis is the one addition beyond your stated stack, and it's non-negotiable for the sub-1-second check-in target. Everything else — Next.js, Express, MongoDB — does exactly the job you need with no overengineering.
+
+When you're ready, we can move to the next phase: writing the Mongoose schemas and the check-in service logic first, since that's the heart of the system.
+
+You said: Based on the previous system design, now design the MongoDB database structure.
+Based on the previous system design, now design the MongoDB database structure.
+Requirements:
+
+Optimize for fast QR check-in
+Support up to 5000 active members
+Keep schema clean and scalable
+Task:
+
+Define all collections (members, attendance, staff, payments, inventory)
+Provide example document structure for each
+Specify indexes (VERY IMPORTANT)
+Explain relationships between collections
+Suggest any embedding vs referencing decisions Do NOT write application code yet. Focus only on database design.
+Show more
+May 6
+Claude responded: Here is the complete database design.
+Here is the complete database design. I'll cover each collection with its full document structure, then show the ERD, and close with the critical decisions on embedding vs. referencing.
+
+Collections and document structures
+1. members — the hot collection
+This is read on every single QR scan. Every field is chosen deliberately.
+
+js
+{
+  _id: ObjectId("..."),
+  
+  // QR identity — this is what the scanner sends
+  memberId: "MBR-7F3A9C2B",        // UUID, encoded in QR code
+  
+  // Personal info
+  fullName: "Selam Tesfaye",
+  phone: "+251911234567",
+  photoUrl: "https://...",          // optional, stored in object storage
+  emergencyContact: {
+    name: "Abebe Tesfaye",
+    phone: "+251922345678"
+  },
+  
+  // Membership plan
+  plan: {
+    type: "3-day",                  // enum: "3-day" | "full-week"
+    allowedDays: [1, 3, 5],        // ISO weekdays: 1=Mon … 7=Sun. null if full-week
+    startDate: ISODate("2026-05-01"),
+    expiryDate: ISODate("2026-06-01"),
+    durationMonths: 1
+  },
+  
+  // Status
+  status: "active",                 // enum: "active" | "expired" | "suspended" | "frozen"
+  
+  // Payment summary — embedded for dashboard speed
+  paymentSummary: {
+    lastPaidDate: ISODate("2026-05-01"),
+    lastPaidAmount: 800,
+    outstandingBalance: 0
+  },
+  
+  // Assigned trainer (optional)
+  assignedTrainerId: ObjectId("..."),   // ref → staff._id
+  
+  // Meta
+  registeredBy: ObjectId("..."),        // ref → staff._id (receptionist)
+  createdAt: ISODate("2026-05-01"),
+  updatedAt: ISODate("2026-05-01")
+}
+2. attendance — the write-heavy collection
+One document per check-in event. Never update — only insert and read.
+
+js
+{
+  _id: ObjectId("..."),
+  
+  memberId: "MBR-7F3A9C2B",         // string ref → members.memberId (not ObjectId — scanner sends this)
+  memberRef: ObjectId("..."),        // ObjectId ref for joins in reports
+  
+  checkedInAt: ISODate("2026-05-06T07:34:12Z"),
+  date: "2026-05-06",               // string YYYY-MM-DD — used for duplicate check index
+  
+  // Outcome
+  status: "granted",                 // enum: "granted" | "denied"
+  denyReason: null,                  // "expired" | "wrong-day" | "duplicate" | null
+  
+  // Snapshot at time of scan (avoids joins for audit trail)
+  planSnapshot: {
+    type: "3-day",
+    expiryDate: ISODate("2026-06-01")
+  }
+}
+3. staff — covers owners, receptionists, trainers
+js
+{
+  _id: ObjectId("..."),
+  
+  fullName: "Dawit Alemu",
+  phone: "+251933456789",
+  email: "dawit@gym.com",
+  
+  role: "trainer",                   // enum: "owner" | "receptionist" | "trainer"
+  
+  // Auth
+  passwordHash: "$2b$12$...",
+  refreshTokenHash: "$2b$12$...",
+  lastLoginAt: ISODate("2026-05-06"),
+  
+  // Trainer-specific (null for other roles)
+  trainerProfile: {
+    specialization: "Strength & conditioning",
+    schedule: {
+      mon: true, tue: true, wed: false,
+      thu: true, fri: true, sat: false, sun: false
+    },
+    assignedMemberCount: 12          // denormalized counter — increment on assign
+  },
+  
+  // Salary (manual recording)
+  salary: {
+    amount: 5000,
+    currency: "ETB",
+    paymentDay: 30                   // day of month
+  },
+  
+  status: "active",                  // "active" | "inactive"
+  createdAt: ISODate("2026-01-15"),
+  updatedAt: ISODate("2026-05-01")
+}
+4. payments — financial ledger, immutable
+Never update a payment document. Cancel by inserting a reversal entry.
+
+js
+{
+  _id: ObjectId("..."),
+  
+  type: "membership",               // enum: "membership" | "expense" | "salary" | "other"
+  direction: "in",                  // "in" (income) | "out" (expense)
+  
+  // Income fields (direction: "in")
+  memberRef: ObjectId("..."),       // ref → members._id
+  memberName: "Selam Tesfaye",      // snapshot — member could be deleted later
+  planType: "3-day",
+  
+  // Expense fields (direction: "out")
+  expenseCategory: null,            // "salary" | "equipment" | "utilities" | "other"
+  staffRef: null,                   // ref → staff._id (for salary payments)
+  description: "Monthly membership renewal",
+  
+  amount: 800,
+  currency: "ETB",
+  
+  paymentMethod: "cash",            // "cash" | "bank-transfer" | "other"
+  
+  recordedBy: ObjectId("..."),      // ref → staff._id
+  recordedAt: ISODate("2026-05-01"),
+  
+  period: {
+    month: 5,
+    year: 2026
+  }
+}
+5. inventory — equipment tracking
+js
+{
+  _id: ObjectId("..."),
+  
+  name: "Treadmill",
+  category: "Cardio",               // "Cardio" | "Strength" | "Free weights" | "Other"
+  brand: "Life Fitness",
+  serialNumber: "LF-TM-2024-009",
+  quantity: 6,
+  
+  condition: "good",                // "good" | "fair" | "needs-repair" | "retired"
+  
+  purchaseInfo: {
+    date: ISODate("2024-03-15"),
+    cost: 85000,
+    currency: "ETB",
+    vendor: "Sports Ethiopia PLC"
+  },
+  
+  maintenance: {
+    lastServiceDate: ISODate("2026-03-01"),
+    nextServiceDate: ISODate("2026-09-01"),
+    intervalMonths: 6,
+    notes: "Belt replaced in March service"
+  },
+  
+  // Alert will be auto-generated when nextServiceDate approaches
+  
+  createdBy: ObjectId("..."),
+  createdAt: ISODate("2024-03-15"),
+  updatedAt: ISODate("2026-03-01")
+}
+6. alerts — internal notification queue
+js
+{
+  _id: ObjectId("..."),
+  
+  type: "membership-expiring",
+  // enum: "membership-expiring" | "membership-expired" | 
+  //       "payment-overdue" | "maintenance-due" | "manual"
+  
+  severity: "warning",              // "info" | "warning" | "critical"
+  
+  // Who this alert is about
+  subjectType: "member",            // "member" | "equipment" | "staff"
+  subjectRef: ObjectId("..."),
+  subjectName: "Selam Tesfaye",
+  
+  message: "Membership expires in 3 days",
+  
+  // Who should see it
+  visibleTo: ["owner", "receptionist"],  // array of roles
+  
+  isRead: false,
+  readBy: [],                        // array of staffRef ObjectIds
+  
+  createdAt: ISODate("2026-05-03"),
+  expiresAt: ISODate("2026-05-10")   // auto-clean old alerts
+}
+Entity relationship diagram
+
+
+Indexes — the most important section
+These are your performance guarantees. Every query the system makes must hit an index.
+
+js
+// ─── members ───────────────────────────────────────────────
+// PRIMARY: QR check-in hot path — sub-millisecond lookup
+{ memberId: 1 }                             // unique: true
+
+// Receptionist search by name/phone
+{ phone: 1 }                                // unique: true
+{ fullName: "text" }                        // text index for name search
+
+// Expiry alerts — find members expiring soon
+{ "plan.expiryDate": 1, status: 1 }
+
+// Trainer dashboard — list their assigned members
+{ assignedTrainerId: 1, status: 1 }
+
+
+// ─── attendance ────────────────────────────────────────────
+// CRITICAL: Duplicate check — "has this member already checked in today?"
+// This query runs on EVERY scan. Must be instant.
+{ memberId: 1, date: 1 }                    // unique: true (prevents duplicate writes too)
+
+// Daily log view — all check-ins on a given date
+{ date: 1, checkedInAt: -1 }
+
+// Member history — all visits for one member
+{ memberId: 1, checkedInAt: -1 }
+
+// Reports — denied entries by reason
+{ status: 1, date: 1 }
+
+
+// ─── staff ─────────────────────────────────────────────────
+// Login
+{ email: 1 }                                // unique: true
+
+// Role-based queries (list all trainers, etc.)
+{ role: 1, status: 1 }
+
+
+// ─── payments ──────────────────────────────────────────────
+// Member payment history
+{ memberRef: 1, recordedAt: -1 }
+
+// Monthly P&L reports
+{ "period.year": 1, "period.month": 1, direction: 1 }
+
+// Expense breakdown by category
+{ direction: 1, expenseCategory: 1, recordedAt: -1 }
+
+
+// ─── inventory ─────────────────────────────────────────────
+// Maintenance due alerts (background job queries this)
+{ nextServiceDate: 1, condition: 1 }
+
+// Category filter in dashboard
+{ category: 1, condition: 1 }
+
+
+// ─── alerts ────────────────────────────────────────────────
+// Receptionist/owner alert feed — unread only
+{ visibleTo: 1, isRead: 1, createdAt: -1 }
+
+// Auto-expiry cleanup
+{ expiresAt: 1 }                            // TTL index: expireAfterSeconds: 0
+The { memberId: 1, date: 1 } compound unique index on attendance does double duty: it makes the duplicate check a single index scan, and it also prevents the application code from ever writing two records for the same member on the same day, even under concurrent load. That constraint is enforced at the database level, not just the application level.
+
+Embedding vs. referencing decisions
+Decision	Choice	Reason
+plan inside members	Embedded	Always read together; never queried independently
+emergencyContact inside members	Embedded	Small, belongs to one member, never queried across members
+paymentSummary inside members	Embedded denormalized	Receptionist dashboard needs "last paid / balance" without a join — updated when a payment is recorded
+trainerProfile inside staff	Embedded	Trainer-specific data, always read with the staff doc
+planSnapshot inside attendance	Embedded snapshot	Audit trail — you want to know what plan the member had at the time of scan, even if the plan later changes
+memberName inside payments	Embedded snapshot	A member might be deleted years later; the payment record must still make sense
+attendance → members relationship	Reference (string memberId)	Attendance is a separate time-series collection; embedding would cause unbounded document growth
+payments → members	Reference	One member has potentially hundreds of payments over their lifetime
+Trainer assignment on members	Reference (assignedTrainerId)	A trainer is a full document with its own lifecycle; only the FK lives on the member
+salary inside staff	Embedded	Salary terms belong to the staff record; actual salary payments are separate payments documents
+Size and growth projections
+At 5,000 active members with 300 check-ins/day, the attendance collection grows at roughly 110,000 records/year. Each document is ~300 bytes. That's 33MB/year — essentially nothing. You won't need to archive or shard this collection for many years.
+
+The members collection at 5,000 documents is tiny in MongoDB terms. The entire collection fits comfortably in RAM. The payments and inventory collections are similarly small. Your only "large" collection is attendance, and it's deliberately lean.
+
+Ready to move to the next phase — the Express module structure and service layer code?
+
+You said: Now design the QR check-in system logic in detail.
+Now design the QR check-in system logic in detail.
+Context:
+
+A hardware QR scanner is used (acts like keyboard input)
+System must respond in under 1 second
+Task:
+
+Step-by-step backend flow for QR scan
+Validation logic:
+membership active?
+allowed today?
+duplicate scan prevention
+Attendance recording logic
+Error handling (expired, invalid QR, etc.)
+Performance optimization techniques Do NOT write full code yet. Focus on logic and flow.
+Show more
+May 6
+Claude responded: This is the most latency-critical piece of the entire system, so every decision here needs justification.
+This is the most latency-critical piece of the entire system, so every decision here needs justification. Let me walk through each layer in depth.
+
+How the scanner works — the hardware reality
+A USB QR scanner acts as a keyboard. When a member holds their QR code up to it, the scanner "types" the encoded string into whatever input has focus — exactly as if someone typed it at speed. This means your check-in station needs a dedicated browser page with an invisible input field that auto-captures every keystroke and submits when it detects a full token (either a fixed length or a terminating character like Enter). There is no "scan event" — just keyboard input that your frontend catches and fires at the API.
+
+This matters for architecture because the entire check-in flow is initiated from a single, always-on browser tab, not from the main dashboard.
+
+
+
+Step-by-step backend logic
+Step 1 — Frontend capture
+The check-in station runs a dedicated page at /checkin. On load, it focuses an invisible <input> field and listens for keydown events. Every character the scanner types accumulates in a buffer. When the scanner sends an Enter keypress (which all hardware scanners do by default after the barcode), the frontend fires the API call and clears the buffer. A 500ms debounce prevents double-fires if the scanner misfires.
+
+The frontend also handles the display — a large green/red feedback panel showing the member's name, plan, and result. This is separate from validation: the frontend does no validation itself, it only shows what the API returns.
+
+Step 2 — API key authentication
+The scanner station is configured (once, at setup) with a static API key stored in its environment. Every request from the scanner includes this in the x-scanner-key header. Middleware checks it with a constant-time string comparison (using crypto.timingSafeEqual) to prevent timing attacks, and rejects anything that doesn't match before any other code runs. This is intentionally not a JWT — the scanner never "logs in." It has one permanent credential.
+
+Step 3 — Input parsing and format validation
+The body contains { memberId: "MBR-7F3A9C2B" }. Before any database work, validate the format with a strict regex: /^MBR-[A-Z0-9]{8}$/. This catches corrupted scans, partial reads, or garbage input in under 1ms. Return 400 immediately if it fails — no Redis, no MongoDB touched.
+
+Step 4 — Redis lookup
+GET member:MBR-7F3A9C2B
+The cached value is a JSON string containing exactly what the check-in logic needs: status, plan.type, plan.allowedDays, plan.expiryDate, fullName, and assignedTrainerId. Nothing else. The cache was populated either when the member was registered, or on the last cache miss.
+
+TTL on every key is 24 hours. When a receptionist updates a member's plan or status, the service layer must immediately invalidate that Redis key (DEL member:{memberId}). This is the only cache invalidation event — every write to a member document triggers a Redis delete, forcing a fresh DB read on the next scan.
+
+On a cache miss, query MongoDB using the memberId index (not _id), populate the cache, then continue. Even on a miss, the MongoDB query on an indexed field over 5,000 documents takes under 5ms.
+
+Step 5 — Membership status check
+if (member.status !== 'active') → deny
+The status field is an enum. Any value other than "active" — whether "expired", "suspended", or "frozen" — is a hard deny. Return a specific reason code so the frontend can show the right message. Do not conflate "suspended" with "expired" — the receptionist needs to know which one it is.
+
+Step 6 — Expiry date check
+Timezone is critical here. All dates in MongoDB are stored as UTC. Ethiopia is UTC+3. A membership that expires on May 31 should be valid all day May 31 Addis Ababa time, which runs from May 31 00:00 to May 31 20:59 UTC. The comparison must be done against the member's local date, not UTC date, or members will be wrongly denied for the last 3 hours of their last valid day.
+
+todayLocal = currentDateInUTC+3()
+if (member.plan.expiryDate < todayLocal) → deny, reason: "expired"
+Additionally, if a member is denied because they're expired, immediately mark their status as "expired" in MongoDB and invalidate their Redis cache. This prevents their status from showing as "active" in the dashboard while the scanner correctly denies them.
+
+Step 7 — Allowed days check
+if (member.plan.type === '3-day') {
+  todayWeekday = getDayOfWeek()  // 1=Mon … 7=Sun
+  if (!member.plan.allowedDays.includes(todayWeekday)) → deny, reason: "wrong-day"
+}
+// full-week members: skip this check entirely
+The response for a wrong-day denial should include the next allowed day so the front panel can display "Next allowed day: Wednesday." This costs nothing to compute and saves confusion.
+
+Step 8 — Duplicate scan prevention
+This is the step that touches the database, but it does so through the unique compound index rather than a query-then-write pattern.
+
+The approach is optimistic insert, not check-then-insert:
+
+Instead of first querying attendance to see if a record exists, directly attempt the insert. If the document inserts successfully, the scan is the first of the day — grant entry. If MongoDB throws a duplicate key error (error code 11000) on the { memberId, date } unique index, the member already checked in today — deny with reason "duplicate". This is faster than check-then-insert because it's one database round trip instead of two, and it's race-condition safe because the uniqueness is enforced at the index level, not in application code.
+
+try {
+  insertOne({ memberId, date: todayLocal, status: "granted", ... })
+  → grant entry
+} catch DuplicateKeyError {
+  → deny, reason: "duplicate"
+}
+Step 9 — Attendance document write
+The document written on grant is minimal and deliberate:
+
+js
+{
+  memberId: "MBR-7F3A9C2B",
+  memberRef: ObjectId("..."),
+  checkedInAt: ISODate("now"),
+  date: "2026-05-06",
+  status: "granted",
+  denyReason: null,
+  planSnapshot: { type: "3-day", expiryDate: ISODate("2026-06-01") }
+}
+The planSnapshot is embedded, not referenced, so the attendance log is a faithful historical record regardless of future plan changes.
+
+Denied scans are also written, but as status: "denied" with a denyReason. This gives you a complete audit trail — you can see every denied entry attempt, which is useful for identifying members who repeatedly scan on wrong days or who are unaware their membership lapsed.
+
+Step 10 — Post-grant expiry warning
+After writing the attendance record (not before — don't delay the response for this), check if expiryDate - today <= 5 days. If so, queue an alert insert into the alerts collection. This write is done asynchronously — the API response is sent immediately after the attendance write, and the alert insert happens in a setImmediate callback. The member gets their grant in under 200ms; the alert appears in the receptionist's panel within seconds.
+
+Error handling matrix
+Scenario	HTTP code	denyReason	Response to frontend	Action
+Invalid API key	401	—	Drop silently	Log IP
+Malformed memberId	400	"invalid-format"	Show error	Log attempt
+Member not found	404	"unknown-id"	Red panel	Log attempt
+Status: suspended	200	"suspended"	Red panel + message	—
+Status: frozen	200	"frozen"	Red panel + message	—
+Expired membership	200	"expired"	Red panel + expiry date	Mark expired in DB, queue alert
+Wrong day (3-day plan)	200	"wrong-day"	Red panel + next valid day	—
+Already checked in	200	"duplicate"	Yellow panel + first check-in time	—
+Granted	200	null	Green panel + name	Write attendance
+MongoDB down	503	—	Red panel: "System error"	Log error, alert owner
+Note that denied scans return HTTP 200, not 4xx. This is intentional — the scan was received and processed correctly. The denial is a business outcome, not an API error. The frontend uses the denyReason field to determine what to display, not the HTTP status.
+
+Performance optimization techniques
+The 200ms target breakdown:
+
+Stage	Target latency
+Network (scanner → server, LAN)	< 5ms
+API key check	< 1ms
+Format validation	< 1ms
+Redis lookup (cache hit)	< 3ms
+Validation logic (in-memory)	< 1ms
+MongoDB attendance write	< 10ms
+Response serialization	< 1ms
+Total	< 22ms (leaves 978ms of buffer)
+1. Keep the Redis payload tiny. Only cache the fields the check-in logic actually needs. Don't cache the whole member document including photoUrl, emergencyContact, and registeredBy. A 200-byte Redis value is faster to deserialize than a 2KB one.
+
+2. MongoDB write concern: { w: 1 } — the default, acknowledge from the primary only. Don't use { w: "majority" } on the check-in write path. The attendance write is not so critical that you need quorum acknowledgment — if a replica lags, the loss of a single attendance record is acceptable. Speed wins here.
+
+3. Connection pooling. Mongoose maintains a connection pool. Set minPoolSize: 5 so connections are warm at startup and the first scan of the day doesn't pay a connection setup cost.
+
+4. No middleware overhead on the check-in route. The check-in endpoint should not go through JWT auth middleware, session middleware, or rate limiting middleware. It has one job: check the scanner API key. All other middleware is wasted CPU cycles on the hot path.
+
+5. The check-in page is a separate Next.js route with no layout, no navigation, no sidebar. It's a blank page with one invisible input, one feedback panel, and a WebSocket connection to the server for the live log. No heavy React component trees, no data fetching on render.
+
+6. Graceful Redis fallback. If Redis is unavailable (restart, crash), the system must not go down. Wrap every Redis call in a try/catch. On failure, fall through to MongoDB. Log the Redis error, but serve the check-in. A slower check-in is better than no check-in.
+
+7. Pre-warm the cache at start of day. Run a background job at 4:00 AM every day (before the gym opens) that fetches all active members and loads them into Redis. This eliminates cold-start cache misses for the first wave of morning check-ins. The job runs findAll({ status: 'active' }) and does a pipeline of Redis SET commands in a single batch.
+
+8. Optimistic insert over check-then-write. Covered in Step 8 above. One round trip vs two, and race-condition proof at the DB level.
+
+The check-in station setup
+The check-in page should display a live feed of the last 10 check-ins, updated via a Server-Sent Events (SSE) stream. Every time an attendance document is written, the server pushes an event to the check-in page. The receptionist at the front desk can see who's coming in without running a query. This costs one SSE connection per check-in station — essentially free in terms of server resources.
+
+The physical screen at the door shows only two things: the feedback panel (green/red/yellow with the member's name) and the live feed. No login prompt, no navigation. The page auto-reconnects the SSE stream if it drops, and refocuses the hidden input if the window loses focus.
+
+Ready to move into the actual code — starting with the Express check-in route, the Redis service, and the validation middleware?
+
+You said: Now design the REST API for this system.
+Now design the REST API for this system.
+Task:
+
+Define all endpoints (members, check-in, payments, staff, inventory)
+Specify request/response format
+Include authentication & role-based access control
+Keep APIs clean and scalable Do NOT implement code yet. Focus on API design only.
+May 6
+Claude responded: Here is the complete API design — every endpoint, its contract, who can call it, and the reasoning behind each decision.
+Here is the complete API design — every endpoint, its contract, who can call it, and the reasoning behind each decision.
+
+API conventions
+Before the endpoints, these global rules apply everywhere in the API.
+
+All endpoints are prefixed with /api/v1. Versioning from day one costs nothing and saves a painful migration later. Base URL: https://yourdomain.com/api/v1.
+
+All request and response bodies are JSON. Dates are ISO 8601 strings. All monetary amounts are integers in the smallest currency unit (Ethiopian cents, so 800 ETB = 80000).
+
+Every response — success or failure — follows a consistent envelope:
+
+js
+// Success
+{
+  "success": true,
+  "data": { ... }
+}
+
+// Paginated list
+{
+  "success": true,
+  "data": [ ... ],
+  "pagination": {
+    "total": 342,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 18
+  }
+}
+
+// Error
+{
+  "success": false,
+  "error": {
+    "code": "MEMBERSHIP_EXPIRED",
+    "message": "This membership expired on 2026-04-30"
+  }
+}
+Using machine-readable error.code strings (not just HTTP status codes) means the frontend can make decisions — show the right panel, display the right message — without parsing human-readable strings.
+
+Authentication design
+The system uses two credential types that never mix.
+
+Staff JWT flow: Staff log in with email + password. The server issues a short-lived access token (15 min) and a long-lived refresh token (7 days) stored in an HTTP-only cookie. The access token travels in the Authorization: Bearer <token> header on every request. The refresh token is never sent with API calls — only to the dedicated /auth/refresh endpoint. When the access token expires, the frontend silently calls /auth/refresh to get a new one. Staff never see this happen.
+
+Scanner API key: A single static secret, configured once, sent in x-scanner-key header. No expiry, no refresh. Rotated manually if compromised.
+
+Role hierarchy:
+
+owner
+  └── can do everything
+
+receptionist
+  └── check-in, member CRUD, payment recording, inventory view, alert read
+
+trainer
+  └── view their assigned members, view attendance of their members
+The role is embedded in the JWT payload as { staffId, role }. Every protected route declares which roles may call it. Middleware enforces this before the controller runs.
+
+1. Authentication endpoints
+These are the only endpoints with no role requirement — they're public by design.
+
+POST   /api/v1/auth/login
+POST   /api/v1/auth/refresh
+POST   /api/v1/auth/logout
+GET    /api/v1/auth/me
+POST /api/v1/auth/login
+Access: Public
+
+Request:
+
+json
+{
+  "email": "dawit@gym.com",
+  "password": "securepassword"
+}
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGci...",
+    "staff": {
+      "id": "664a1f...",
+      "fullName": "Dawit Alemu",
+      "role": "receptionist"
+    }
+  }
+}
+The refresh token is set as an HTTP-only cookie by the server — it never appears in the response body. The accessToken is stored in memory on the frontend (not localStorage).
+
+Error codes: INVALID_CREDENTIALS, ACCOUNT_INACTIVE
+
+POST /api/v1/auth/refresh
+Access: Public (requires valid refresh token cookie)
+
+Request: No body — cookie is sent automatically by the browser.
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGci..."
+  }
+}
+Error codes: REFRESH_TOKEN_INVALID, REFRESH_TOKEN_EXPIRED
+
+POST /api/v1/auth/logout
+Access: Any authenticated staff
+
+Request: No body.
+
+Response 200:
+
+json
+{ "success": true, "data": null }
+Clears the refresh token cookie and invalidates the token hash stored in MongoDB.
+
+GET /api/v1/auth/me
+Access: Any authenticated staff
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "id": "664a1f...",
+    "fullName": "Dawit Alemu",
+    "role": "receptionist",
+    "email": "dawit@gym.com"
+  }
+}
+Used by the frontend on app load to restore session state.
+
+2. Check-in endpoints
+The most performance-critical group. Two endpoints: one for the scanner, one for the live dashboard feed.
+
+POST   /api/v1/checkin              ← scanner calls this
+GET    /api/v1/checkin/stream       ← dashboard SSE stream
+GET    /api/v1/checkin/today        ← today's log for receptionist
+POST /api/v1/checkin
+Access: Scanner API key only (x-scanner-key header). No JWT.
+
+Request:
+
+json
+{
+  "memberId": "MBR-7F3A9C2B"
+}
+Response 200 — granted:
+
+json
+{
+  "success": true,
+  "data": {
+    "result": "granted",
+    "member": {
+      "fullName": "Selam Tesfaye",
+      "planType": "3-day",
+      "expiryDate": "2026-06-01",
+      "expiringSoon": false
+    },
+    "checkedInAt": "2026-05-06T07:34:12Z"
+  }
+}
+Response 200 — denied:
+
+json
+{
+  "success": true,
+  "data": {
+    "result": "denied",
+    "denyReason": "wrong-day",
+    "message": "3-day plan. Next allowed day: Wednesday",
+    "member": {
+      "fullName": "Selam Tesfaye"
+    }
+  }
+}
+All outcomes return 200. The denyReason enum values are: unknown-id, expired, suspended, frozen, wrong-day, duplicate.
+
+Error responses (non-200):
+
+Status	Code	Meaning
+400	INVALID_FORMAT	memberId doesn't match pattern
+401	INVALID_SCANNER_KEY	Wrong or missing API key
+503	SERVICE_UNAVAILABLE	DB/Redis down
+GET /api/v1/checkin/stream
+Access: Owner, receptionist
+
+This is a Server-Sent Events endpoint. The connection stays open. Every attendance write pushes an event to all connected clients. The frontend uses this to update the live check-in feed without polling.
+
+Response: Content-Type: text/event-stream
+
+data: {"result":"granted","fullName":"Selam Tesfaye","planType":"3-day","checkedInAt":"2026-05-06T07:34:12Z"}
+
+data: {"result":"denied","fullName":"Abebe Girma","denyReason":"expired","checkedInAt":"2026-05-06T07:35:01Z"}
+GET /api/v1/checkin/today
+Access: Owner, receptionist
+
+Query params: page, limit, result (filter: granted | denied)
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": [
+    {
+      "memberId": "MBR-7F3A9C2B",
+      "fullName": "Selam Tesfaye",
+      "result": "granted",
+      "checkedInAt": "2026-05-06T07:34:12Z",
+      "planType": "3-day"
+    }
+  ],
+  "pagination": { "total": 87, "page": 1, "limit": 20, "totalPages": 5 }
+}
+3. Member endpoints
+GET    /api/v1/members                ← list with filters
+POST   /api/v1/members                ← register new member
+GET    /api/v1/members/:memberId      ← single member profile
+PUT    /api/v1/members/:memberId      ← update member info
+PATCH  /api/v1/members/:memberId/plan ← renew or change plan
+PATCH  /api/v1/members/:memberId/status ← suspend, freeze, reactivate
+DELETE /api/v1/members/:memberId      ← soft delete (owner only)
+GET    /api/v1/members/:memberId/qr   ← get QR code image
+GET    /api/v1/members/:memberId/attendance ← member's visit history
+GET /api/v1/members
+Access: Owner, receptionist, trainer (trainers see only their assigned members)
+
+Query params:
+
+Param	Type	Example
+search	string	?search=Selam — searches name and phone
+status	string	?status=active
+plan	string	?plan=3-day
+expiringInDays	number	?expiringInDays=7
+trainerId	ObjectId	?trainerId=664a...
+page	number	default 1
+limit	number	default 20, max 100
+sortBy	string	createdAt, fullName, expiryDate
+order	string	asc | desc
+Response 200:
+
+json
+{
+  "success": true,
+  "data": [
+    {
+      "memberId": "MBR-7F3A9C2B",
+      "fullName": "Selam Tesfaye",
+      "phone": "+251911234567",
+      "status": "active",
+      "plan": {
+        "type": "3-day",
+        "expiryDate": "2026-06-01",
+        "daysRemaining": 26
+      },
+      "paymentSummary": {
+        "lastPaidDate": "2026-05-01",
+        "outstandingBalance": 0
+      },
+      "createdAt": "2026-05-01"
+    }
+  ],
+  "pagination": { "total": 312, "page": 1, "limit": 20, "totalPages": 16 }
+}
+POST /api/v1/members
+Access: Owner, receptionist
+
+Request:
+
+json
+{
+  "fullName": "Selam Tesfaye",
+  "phone": "+251911234567",
+  "emergencyContact": {
+    "name": "Abebe Tesfaye",
+    "phone": "+251922345678"
+  },
+  "plan": {
+    "type": "3-day",
+    "allowedDays": [1, 3, 5],
+    "durationMonths": 1,
+    "startDate": "2026-05-01"
+  },
+  "assignedTrainerId": "664a1f..."
+}
+The server generates memberId (UUID), computes expiryDate from startDate + durationMonths, generates the QR code image, and stores it. The initial payment is recorded separately through the payments endpoint.
+
+Response 201:
+
+json
+{
+  "success": true,
+  "data": {
+    "memberId": "MBR-7F3A9C2B",
+    "fullName": "Selam Tesfaye",
+    "qrCodeUrl": "https://.../qr/MBR-7F3A9C2B.png",
+    "plan": {
+      "type": "3-day",
+      "allowedDays": [1, 3, 5],
+      "startDate": "2026-05-01",
+      "expiryDate": "2026-06-01"
+    }
+  }
+}
+Error codes: PHONE_ALREADY_EXISTS, INVALID_PLAN_TYPE, INVALID_ALLOWED_DAYS
+
+GET /api/v1/members/:memberId
+Access: Owner, receptionist. Trainer only if member is assigned to them.
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "memberId": "MBR-7F3A9C2B",
+    "fullName": "Selam Tesfaye",
+    "phone": "+251911234567",
+    "photoUrl": "https://...",
+    "emergencyContact": { "name": "Abebe Tesfaye", "phone": "+251922345678" },
+    "status": "active",
+    "plan": {
+      "type": "3-day",
+      "allowedDays": [1, 3, 5],
+      "startDate": "2026-05-01",
+      "expiryDate": "2026-06-01",
+      "daysRemaining": 26
+    },
+    "paymentSummary": {
+      "lastPaidDate": "2026-05-01",
+      "lastPaidAmount": 80000,
+      "outstandingBalance": 0
+    },
+    "assignedTrainer": {
+      "id": "664a...",
+      "fullName": "Dawit Alemu"
+    },
+    "stats": {
+      "totalVisits": 14,
+      "visitsThisMonth": 8,
+      "lastVisit": "2026-05-05"
+    },
+    "createdAt": "2026-05-01"
+  }
+}
+PUT /api/v1/members/:memberId
+Access: Owner, receptionist
+
+Updates personal info only — name, phone, emergency contact, photo, assigned trainer. Plan changes go through the dedicated plan endpoint.
+
+Request:
+
+json
+{
+  "fullName": "Selam Tesfaye Bekele",
+  "phone": "+251911234567",
+  "assignedTrainerId": "664b..."
+}
+Response 200: Returns the updated member object (same shape as GET).
+
+After a successful update, the server invalidates the Redis cache for this memberId.
+
+PATCH /api/v1/members/:memberId/plan
+Access: Owner, receptionist
+
+Renewing or changing a plan is its own endpoint because it has distinct business logic: recompute expiry, update Redis, and optionally record a payment in the same transaction.
+
+Request:
+
+json
+{
+  "type": "full-week",
+  "durationMonths": 1,
+  "startDate": "2026-06-01",
+  "allowedDays": null
+}
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "plan": {
+      "type": "full-week",
+      "allowedDays": null,
+      "startDate": "2026-06-01",
+      "expiryDate": "2026-07-01"
+    }
+  }
+}
+PATCH /api/v1/members/:memberId/status
+Access: Owner, receptionist (suspended, frozen, active). Owner only for permanent changes.
+
+Request:
+
+json
+{
+  "status": "suspended",
+  "reason": "Unpaid balance for 2 months"
+}
+Response 200: Returns updated status. Invalidates Redis cache immediately.
+
+GET /api/v1/members/:memberId/qr
+Access: Owner, receptionist
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "memberId": "MBR-7F3A9C2B",
+    "qrCodeUrl": "https://.../qr/MBR-7F3A9C2B.png",
+    "qrCodeBase64": "data:image/png;base64,..."
+  }
+}
+The base64 version is included so the frontend can render it directly for printing without a second round trip.
+
+GET /api/v1/members/:memberId/attendance
+Access: Owner, receptionist, trainer (own members only)
+
+Query params: from (date), to (date), page, limit
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "member": { "fullName": "Selam Tesfaye", "memberId": "MBR-7F3A9C2B" },
+    "records": [
+      {
+        "date": "2026-05-06",
+        "checkedInAt": "2026-05-06T07:34:12Z",
+        "result": "granted"
+      },
+      {
+        "date": "2026-05-04",
+        "checkedInAt": "2026-05-04T08:12:44Z",
+        "result": "denied",
+        "denyReason": "wrong-day"
+      }
+    ],
+    "summary": {
+      "totalGranted": 13,
+      "totalDenied": 2
+    }
+  },
+  "pagination": { "total": 15, "page": 1, "limit": 20, "totalPages": 1 }
+}
+4. Staff endpoints
+GET    /api/v1/staff                 ← list all staff
+POST   /api/v1/staff                 ← create staff account
+GET    /api/v1/staff/:staffId        ← staff profile
+PUT    /api/v1/staff/:staffId        ← update profile
+PATCH  /api/v1/staff/:staffId/status ← activate / deactivate
+PATCH  /api/v1/staff/:staffId/password ← change password
+GET    /api/v1/staff/:staffId/members ← trainer's assigned members
+GET /api/v1/staff
+Access: Owner only
+
+Query params: role, status, page, limit
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "664a...",
+      "fullName": "Dawit Alemu",
+      "role": "trainer",
+      "phone": "+251933456789",
+      "email": "dawit@gym.com",
+      "status": "active",
+      "trainerProfile": {
+        "specialization": "Strength & conditioning",
+        "assignedMemberCount": 12
+      },
+      "salary": { "amount": 500000, "currency": "ETB" },
+      "createdAt": "2026-01-15"
+    }
+  ],
+  "pagination": { "total": 8, "page": 1, "limit": 20, "totalPages": 1 }
+}
+POST /api/v1/staff
+Access: Owner only
+
+Request:
+
+json
+{
+  "fullName": "Hana Girma",
+  "email": "hana@gym.com",
+  "phone": "+251944567890",
+  "role": "receptionist",
+  "password": "TempPass123!",
+  "salary": {
+    "amount": 300000,
+    "currency": "ETB",
+    "paymentDay": 30
+  }
+}
+Response 201: Returns the created staff object (no passwordHash).
+
+Error codes: EMAIL_ALREADY_EXISTS, INVALID_ROLE
+
+PATCH /api/v1/staff/:staffId/password
+Access: Owner (any staff), or the staff member themselves
+
+Request:
+
+json
+{
+  "currentPassword": "TempPass123!",
+  "newPassword": "MyNewPass456!"
+}
+Owners changing someone else's password don't need to provide currentPassword.
+
+Response 200: { "success": true, "data": null }
+
+GET /api/v1/staff/:staffId/members
+Access: Owner, receptionist (all trainers' members). Trainer (own members only).
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "trainer": { "fullName": "Dawit Alemu" },
+    "members": [
+      {
+        "memberId": "MBR-7F3A9C2B",
+        "fullName": "Selam Tesfaye",
+        "status": "active",
+        "plan": { "type": "3-day", "expiryDate": "2026-06-01" },
+        "stats": { "visitsThisMonth": 8, "lastVisit": "2026-05-05" }
+      }
+    ]
+  }
+}
+5. Payment endpoints
+GET    /api/v1/payments              ← ledger with filters
+POST   /api/v1/payments              ← record payment or expense
+GET    /api/v1/payments/:paymentId   ← single record
+DELETE /api/v1/payments/:paymentId   ← void/cancel (owner only)
+GET    /api/v1/payments/summary      ← P&L summary
+GET /api/v1/payments
+Access: Owner only
+
+Query params:
+
+Param	Type	Notes
+direction	string	in | out
+type	string	membership, expense, salary
+memberId	string	filter by member
+from	date	2026-05-01
+to	date	2026-05-31
+page, limit	number	
+Response 200:
+
+json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "664c...",
+      "type": "membership",
+      "direction": "in",
+      "memberName": "Selam Tesfaye",
+      "memberId": "MBR-7F3A9C2B",
+      "amount": 80000,
+      "currency": "ETB",
+      "paymentMethod": "cash",
+      "description": "Monthly membership — May 2026",
+      "recordedBy": "Hana Girma",
+      "recordedAt": "2026-05-01T09:22:00Z"
+    }
+  ],
+  "pagination": { "total": 145, "page": 1, "limit": 20, "totalPages": 8 }
+}
+POST /api/v1/payments
+Access: Owner, receptionist (income only). Owner only for expenses and salaries.
+
+Request — membership income:
+
+json
+{
+  "type": "membership",
+  "direction": "in",
+  "memberRef": "664a...",
+  "amount": 80000,
+  "currency": "ETB",
+  "paymentMethod": "cash",
+  "description": "Monthly renewal — May 2026",
+  "period": { "month": 5, "year": 2026 }
+}
+Request — expense:
+
+json
+{
+  "type": "expense",
+  "direction": "out",
+  "expenseCategory": "utilities",
+  "amount": 45000,
+  "currency": "ETB",
+  "paymentMethod": "bank-transfer",
+  "description": "Electricity bill — May 2026",
+  "period": { "month": 5, "year": 2026 }
+}
+Request — salary:
+
+json
+{
+  "type": "salary",
+  "direction": "out",
+  "expenseCategory": "salary",
+  "staffRef": "664a...",
+  "amount": 500000,
+  "currency": "ETB",
+  "paymentMethod": "bank-transfer",
+  "description": "Salary — Dawit Alemu — May 2026",
+  "period": { "month": 5, "year": 2026 }
+}
+Response 201: Returns the created payment document.
+
+GET /api/v1/payments/summary
+Access: Owner only
+
+Query params: month (1–12), year
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "period": { "month": 5, "year": 2026 },
+    "income": {
+      "total": 24800000,
+      "breakdown": {
+        "membership": 24800000
+      }
+    },
+    "expenses": {
+      "total": 8500000,
+      "breakdown": {
+        "salary": 6000000,
+        "utilities": 1200000,
+        "equipment": 1000000,
+        "other": 300000
+      }
+    },
+    "netProfit": 16300000,
+    "membershipCount": 310
+  }
+}
+DELETE /api/v1/payments/:paymentId
+Access: Owner only
+
+Payments are never deleted from the database. This endpoint inserts a reversal/void document and marks the original as voided: true. The audit trail is preserved.
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "voided": true,
+    "reversalId": "664d..."
+  }
+}
+6. Inventory endpoints
+GET    /api/v1/inventory             ← list all equipment
+POST   /api/v1/inventory             ← add equipment
+GET    /api/v1/inventory/:itemId     ← single item
+PUT    /api/v1/inventory/:itemId     ← update item
+PATCH  /api/v1/inventory/:itemId/maintenance ← log a service
+DELETE /api/v1/inventory/:itemId     ← retire equipment (owner only)
+GET /api/v1/inventory
+Access: Owner, receptionist
+
+Query params: category, condition, maintenanceDueBefore (date), page, limit
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "664e...",
+      "name": "Treadmill",
+      "category": "Cardio",
+      "brand": "Life Fitness",
+      "quantity": 6,
+      "condition": "good",
+      "maintenance": {
+        "lastServiceDate": "2026-03-01",
+        "nextServiceDate": "2026-09-01",
+        "daysUntilService": 118
+      }
+    }
+  ],
+  "pagination": { "total": 24, "page": 1, "limit": 20, "totalPages": 2 }
+}
+POST /api/v1/inventory
+Access: Owner
+
+Request:
+
+json
+{
+  "name": "Rowing Machine",
+  "category": "Cardio",
+  "brand": "Concept2",
+  "serialNumber": "C2-RM-2026-001",
+  "quantity": 3,
+  "condition": "good",
+  "purchaseInfo": {
+    "date": "2026-05-01",
+    "cost": 1200000,
+    "currency": "ETB",
+    "vendor": "Sports Ethiopia PLC"
+  },
+  "maintenance": {
+    "intervalMonths": 6
+  }
+}
+Server computes nextServiceDate = purchaseDate + intervalMonths.
+
+Response 201: Returns created item.
+
+PATCH /api/v1/inventory/:itemId/maintenance
+Access: Owner, receptionist
+
+Logging a completed service. Server recomputes nextServiceDate = today + intervalMonths and checks whether to dismiss any related alerts.
+
+Request:
+
+json
+{
+  "serviceDate": "2026-05-06",
+  "notes": "Belt replaced, calibrated speed sensors"
+}
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "maintenance": {
+      "lastServiceDate": "2026-05-06",
+      "nextServiceDate": "2026-11-06",
+      "notes": "Belt replaced, calibrated speed sensors"
+    }
+  }
+}
+7. Alerts endpoints
+GET    /api/v1/alerts                ← unread alerts feed
+PATCH  /api/v1/alerts/:alertId/read  ← mark as read
+DELETE /api/v1/alerts/:alertId       ← dismiss alert (owner only)
+GET    /api/v1/alerts/count          ← unread count for badge
+GET /api/v1/alerts
+Access: Owner (all alerts), receptionist (alerts visible to receptionist role)
+
+Query params: isRead (boolean), type, severity, page, limit
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "664f...",
+      "type": "membership-expiring",
+      "severity": "warning",
+      "message": "Selam Tesfaye's membership expires in 3 days",
+      "subjectType": "member",
+      "subjectRef": "MBR-7F3A9C2B",
+      "isRead": false,
+      "createdAt": "2026-05-03T00:00:00Z"
+    },
+    {
+      "id": "6650...",
+      "type": "maintenance-due",
+      "severity": "warning",
+      "message": "Treadmill #3 is due for service in 5 days",
+      "subjectType": "equipment",
+      "subjectRef": "664e...",
+      "isRead": false,
+      "createdAt": "2026-05-04T04:00:00Z"
+    }
+  ],
+  "pagination": { "total": 7, "page": 1, "limit": 20, "totalPages": 1 }
+}
+GET /api/v1/alerts/count
+Access: Owner, receptionist
+
+Lightweight endpoint for the notification badge in the nav. Does not return alert content — just the count.
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": { "unread": 7 }
+}
+8. Reports endpoints
+GET    /api/v1/reports/attendance    ← attendance analytics
+GET    /api/v1/reports/revenue       ← revenue over time
+GET    /api/v1/reports/members       ← member growth and status breakdown
+GET /api/v1/reports/attendance
+Access: Owner, receptionist
+
+Query params: from, to, groupBy (day | week | month)
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "period": { "from": "2026-05-01", "to": "2026-05-31" },
+    "totalCheckins": 2847,
+    "averagePerDay": 91,
+    "peakDay": { "date": "2026-05-06", "count": 134 },
+    "deniedEntries": 43,
+    "byDenialReason": {
+      "expired": 18,
+      "wrong-day": 14,
+      "duplicate": 11
+    },
+    "series": [
+      { "date": "2026-05-01", "granted": 98, "denied": 4 },
+      { "date": "2026-05-02", "granted": 112, "denied": 2 }
+    ]
+  }
+}
+GET /api/v1/reports/revenue
+Access: Owner only
+
+Query params: from, to, groupBy
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "period": { "from": "2026-01-01", "to": "2026-05-31" },
+    "totalIncome": 124000000,
+    "totalExpenses": 42500000,
+    "netProfit": 81500000,
+    "series": [
+      { "month": "2026-01", "income": 22000000, "expenses": 8500000, "profit": 13500000 },
+      { "month": "2026-02", "income": 23500000, "expenses": 8200000, "profit": 15300000 }
+    ]
+  }
+}
+GET /api/v1/reports/members
+Access: Owner, receptionist
+
+Response 200:
+
+json
+{
+  "success": true,
+  "data": {
+    "totalActive": 312,
+    "totalExpired": 89,
+    "totalSuspended": 12,
+    "byPlan": {
+      "3-day": 198,
+      "full-week": 114
+    },
+    "expiringIn7Days": 23,
+    "expiringIn30Days": 67,
+    "newThisMonth": 41,
+    "churnedThisMonth": 18
+  }
+}
+Role-access summary
+
+
+Key design decisions worth noting
+The check-in endpoint returns HTTP 200 for both grants and denials. This is the right call because the request itself succeeded — a 4xx would cause frontend error handlers to fire, complicating the display logic. The result field in the response body carries the actual outcome.
+
+Financial amounts are stored and returned as integers (Ethiopian cents) to avoid floating-point rounding issues entirely. The frontend divides by 100 for display. This is the same convention used by Stripe and every serious payment system.
+
+Payment deletion is a void, not a delete. The database row is never removed. An owner can mark a payment as voided, but the audit trail is permanent. This is non-negotiable for any financial system.
+
+The reports endpoints are kept separate from the data endpoints. They run aggregation pipelines against MongoDB and are expected to be slower — several hundred milliseconds is acceptable for a report, not for a check-in. Keeping them isolated means you can add caching or rate limiting to reports independently without touching the hot paths.
+
+The trainer role's data access is enforced at the service layer, not just middleware. When a trainer calls GET /members, the service automatically appends { assignedTrainerId: req.staff.id } to the query — the trainer never sees this filter, and there's no way to bypass it by manipulating query params.
+
+Ready to start writing the actual code — beginning with the Express project setup, the check-in service, and the Redis integration?
+
+You said: You are a senior software architect and technical writer.
+You are a senior software architect and technical writer.
+I am building a professional gym management system and I want to create a COMPLETE technical documentation that will be used by an AI coding agent to implement the system step-by-step.
+Tech stack:
+
+Frontend: Next.js
+Backend: Node.js (Express)
+Database: MongoDB
+System requirements:
+
+QR-based check-in using a hardware scanner
+Member management with QR code generation
+Smart access control (membership validation, allowed days, expiry)
+Attendance tracking
+Staff roles (owner, receptionist, trainer)
+Manual payment recording
+Inventory management
+Internal alerts for receptionist and owner only
+Constraints:
+
+Must support up to 5000 members
+QR check-in must respond in under 1 second
+System must be simple, scalable, and production-ready
+Task: We will build the documentation step-by-step in phases.
+For THIS response, ONLY generate the following sections:
+
+Product Overview
+Features & Modules
+System Architecture
+Instructions:
+
+Be extremely clear and structured
+Write as if an AI coding agent will follow this exactly
+Avoid vague explanations
+Do NOT write any code
+Do NOT include other sections yet
+IMPORTANT:
+
+Stop after completing these 3 sections
+Wait for my next message ("continue") before generating the next sections Future sections (DO NOT generate yet): 4. MongoDB Database Design 5. Core System Flows 6. API Design 7. Role-Based Access Control 8. Edge Cases & Error Handling 9. Performance Considerations 10. Suggested Folder Structure Output should be clean, professional, and ready to be saved as documentation.
+Show more
+May 6
+
+Viewed a file, ran a command, created a file
+Viewed a file, ran a command, created a file
+
+Check for relevant skills
+
+Setup docx generation environment
+
+Script
+
+Generate professional technical documentation - Sections 1-3
+generate-docs.js
+Done
+You said: Continue generating the documentation.
+Continue generating the documentation.
+For THIS response, ONLY generate: 4. MongoDB Database Design 5. Core System Flows
+Follow the same rules:
+
+Clear, structured
+No code
+Production-level thinking Stop after these sections and wait for the next "continue".
+6:19 PM
+Claude responded: Phase 1 base confirmed working.
+
+Ran 3 commands, edited 2 files, viewed a file
+Ran 3 commands, edited 2 files, viewed a file
+
+Test existing doc generation works
+
+Script
+
+See full error output
+
+Script
+
+Check SKILL.md for correct PageNumber usage
+
+Fix PageNumber usage and finalize generate-docs.js
+
+generate-docs.js
++2
+-2
+
+Remove PageNumber from import since it's not a constructor
+
+generate-docs.js
++4
+-4
+
+Test Phase 1 doc generates cleanly
+
+Script
+Done
+Phase 1 base confirmed working. Now building Sections 4 and 5.
+
+
+Generate Phase 2 documentation - Sections 4 and 5
+Generate Phase 2 documentation - Sections 4 and 5
+
+Generate Phase 2 documentation - Sections 4 and 5
+generate-docs-phase2.js
+Done

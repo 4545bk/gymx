@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GymX | Staff Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#36343a",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed-variant": "#4f378a",
+                        "secondary-fixed-dim": "#cdc0e9",
+                        "on-tertiary": "#3e2e00",
+                        "surface-container": "#211f24",
+                        "primary-container": "#6750a4",
+                        "on-secondary-fixed-variant": "#4b4263",
+                        "surface-dim": "#141218",
+                        "on-secondary-container": "#bfb2da",
+                        "background": "#141218",
+                        "surface-bright": "#3b383e",
+                        "surface-container-high": "#2b292f",
+                        "secondary": "#cdc0e9",
+                        "on-background": "#e6e0e9",
+                        "tertiary": "#e7c365",
+                        "tertiary-fixed": "#ffdf93",
+                        "on-tertiary-fixed-variant": "#594400",
+                        "tertiary-container": "#c9a74d",
+                        "on-surface-variant": "#cbc4d2",
+                        "tertiary-fixed-dim": "#e7c365",
+                        "outline": "#948e9c",
+                        "surface-variant": "#36343a",
+                        "on-secondary-fixed": "#1f1635",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#22005d",
+                        "secondary-fixed": "#e9ddff",
+                        "inverse-primary": "#6750a4",
+                        "on-primary": "#381e72",
+                        "on-surface": "#e6e0e9",
+                        "primary": "#cfbcff",
+                        "primary-fixed-dim": "#cfbcff",
+                        "primary-fixed": "#e9ddff",
+                        "on-tertiary-fixed": "#241a00",
+                        "inverse-surface": "#e6e0e9",
+                        "on-secondary": "#342b4b",
+                        "inverse-on-surface": "#322f35",
+                        "surface-container-low": "#1d1b20",
+                        "surface": "#141218",
+                        "on-error-container": "#ffdad6",
+                        "surface-tint": "#cfbcff",
+                        "outline-variant": "#494551",
+                        "surface-container-lowest": "#0f0d13",
+                        "on-error": "#690005",
+                        "secondary-container": "#4d4465",
+                        "on-primary-container": "#e0d2ff",
+                        "on-tertiary-container": "#503d00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "1440px",
+                        "base": "4px",
+                        "gutter": "24px",
+                        "margin-desktop": "40px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "display": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "label-sm": ["13px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #0a0e1a; font-family: 'Inter', sans-serif; color: #e6e0e9; }
+        .glass-sidebar { backdrop-filter: blur(20px); }
+        .card-layer-1 { background-color: #1a1f35; border: 1px solid #1e293b; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+        .primary-gradient { background: linear-gradient(135deg, #cfbcff 0%, #e7c365 100%); }
+        .zebra-row:nth-child(even) { background-color: #141218; }
+        .zebra-row:nth-child(odd) { background-color: #1a1f35; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="flex min-h-screen">
+<!-- Sidebar Component (Shared Component: SideNavBar) -->
+<aside class="fixed left-0 top-0 h-full w-[260px] bg-surface-container-low border-r border-outline-variant/30 backdrop-blur-xl flex flex-col py-base z-50 glass-sidebar">
+<div class="px-gutter py-8">
+<span class="font-display text-display bg-gradient-to-r from-primary to-tertiary bg-clip-text text-transparent block">GymX</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-1">Elite Performance</span>
+</div>
+<nav class="flex-grow px-4 space-y-2">
+<!-- Navigation Items Mapping -->
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Overview</span>
+</a>
+<!-- Active State: Management (Current Page) -->
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl text-primary font-bold border-r-2 border-primary bg-surface-container-highest transition-all duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-body-md text-body-md">Management</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all duration-200" href="#">
+<span class="material-symbols-outlined">qr_code_scanner</span>
+<span class="font-body-md text-body-md">Operations</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all duration-200" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md text-body-md">Commerce</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Admin</span>
+</a>
+</nav>
+<div class="mt-auto px-4 pb-8 space-y-4">
+<button class="w-full flex items-center justify-center gap-2 primary-gradient text-on-primary-fixed py-3 rounded-xl font-label-sm text-label-sm uppercase tracking-wider shadow-[0_0_20px_rgba(207,188,255,0.2)] active:scale-95 transition-all">
+<span class="material-symbols-outlined">add</span>
+                New Member
+            </button>
+<div class="pt-6 border-t border-outline-variant/20">
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-body-md text-body-md">Profile</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-error hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md text-body-md">Logout</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-grow ml-[260px]">
+<!-- TopAppBar (Shared Component) -->
+<header class="sticky top-0 w-full z-40 bg-surface/80 border-b border-outline-variant/20 backdrop-blur-md flex justify-between items-center px-gutter py-6">
+<div class="flex items-center gap-6">
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">Staff Management</h1>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant">search</span>
+<input class="bg-surface-container-low border border-outline-variant/30 rounded-full pl-10 pr-4 py-2 text-label-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary w-64 transition-all" placeholder="Search staff members..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary/10 text-primary px-6 py-2 rounded-full font-label-sm text-label-sm hover:bg-primary/20 transition-all cursor-pointer active:opacity-70">
+                    Check-in
+                </button>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined p-2 hover:text-primary transition-colors cursor-pointer">notifications</span>
+<span class="material-symbols-outlined p-2 hover:text-primary transition-colors cursor-pointer">help</span>
+<div class="w-10 h-10 rounded-full border-2 border-primary/30 overflow-hidden ml-2">
+<img alt="Admin Avatar" data-alt="Close-up professional headshot of a gym owner in his late 40s, featuring sharp features and a confident gaze. He is wearing a minimalist black athletic polo shirt. The background is a blurred high-end gym environment with cyan and blue neon accent lighting, conveying a mood of elite leadership and technological sophistication." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHxBYUZoE0zIhWhyv61ah4JFnpe661q7hv0QmYx3RjwO52NtccOPoq-EVOXEoCSBANXRhsGntsB-d66QsNNoThOhwpkhBGOG9Lm_nn4Z4syjxOkXlPbpJFNa4QraM33z68QfmBc5nWsPjgXIfGxaK5aQLhvyTIn-00rR-fEYIqYgS24lBvH597YDHtCvjt69he5tLwwCOgIgJuHEmI4xcq2eyl2xT3DfCoPfnuhAXa2P9_5ULKJ7tVT9v0bqI09c2cqmuL7bQxvrb1"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Body -->
+<section class="px-gutter py-8 space-y-8 max-w-[1440px] mx-auto">
+<!-- Bento Grid Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="card-layer-1 p-6 flex items-center gap-6 group hover:border-primary/50 transition-colors">
+<div class="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-4xl">groups</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase">Total Staff</p>
+<h2 class="font-headline-lg text-headline-lg">42</h2>
+<span class="text-xs text-primary font-bold">+3 this month</span>
+</div>
+</div>
+<div class="card-layer-1 p-6 flex items-center gap-6 group hover:border-tertiary/50 transition-colors">
+<div class="w-16 h-16 rounded-2xl bg-tertiary/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-4xl">how_to_reg</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase">Active Now</p>
+<h2 class="font-headline-lg text-headline-lg">18</h2>
+<span class="text-xs text-tertiary font-bold">Shift in progress</span>
+</div>
+</div>
+<div class="card-layer-1 p-6 flex items-center gap-6 group hover:border-secondary/50 transition-colors">
+<div class="w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-4xl">fitness_center</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase">Elite Trainers</p>
+<h2 class="font-headline-lg text-headline-lg">24</h2>
+<span class="text-xs text-secondary font-bold">8 Master Level</span>
+</div>
+</div>
+</div>
+<!-- Staff Table Card -->
+<div class="card-layer-1 overflow-hidden">
+<div class="px-8 py-6 flex justify-between items-center border-b border-outline-variant/10">
+<h3 class="font-headline-md text-headline-md">Employee Directory</h3>
+<div class="flex gap-2">
+<button class="bg-surface-container-highest px-4 py-2 rounded-lg font-label-sm text-label-sm flex items-center gap-2 hover:bg-surface-bright transition-colors">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                            Filters
+                        </button>
+<button class="primary-gradient text-on-primary-fixed px-6 py-2 rounded-lg font-label-sm text-label-sm hover:shadow-lg transition-all active:scale-95">
+                            Add Staff Member
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high border-b border-outline-variant/30">
+<th class="px-8 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Name</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Username</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Role</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Phone</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Status</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Salary (ETB)</th>
+<th class="px-8 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Staff Member 1 -->
+<tr class="zebra-row hover:bg-surface-container-highest transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img alt="Sarah Connor" data-alt="Portrait of a female professional fitness trainer with a muscular build, wearing a sleek high-tech grey performance top. She has a determined expression and pulled-back hair. The lighting is dramatic, coming from the side to emphasize muscle definition, set against a dark, modern gym background with subtle blue rim lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjYwAgn87-peYPLlD-GrCktHFXI7GgUHhExEXLG1sMqPU9K3u_zC--sRNd6snLuVgXfGKKbxEohdNc8Z7KF8POCrdIAfbysWenOd9Nx6_0-zPwEYgx72eMwcUIY1YIBrm09g0IL_L8f-nVLeXJQ-0DkoOdtLNMAQgz5d-3_jCaqm6q4_kI-GlosEXeADGqLQu6WAJZk6xT0ygdKu-Hx47NDMntL1Qj7sE0bf59mnTz3qO7MKW0Xg_lRS8ZYYZSjuhgvR8qT5_gMb1v"/>
+</div>
+<div>
+<p class="font-body-md text-body-md font-bold text-on-surface">Sarah Connor</p>
+<p class="text-xs text-on-surface-variant">sarah.c@gymx.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-body-md text-body-md text-on-surface-variant">@sconnor_train</td>
+<td class="px-6 py-5">
+<span class="bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">Elite Trainer</span>
+</td>
+<td class="px-6 py-5 font-body-md text-body-md text-on-surface-variant">+251 911 234 567</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+<span class="text-emerald-500 font-label-sm text-label-sm">Active Now</span>
+</div>
+</td>
+<td class="px-6 py-5 font-body-md text-body-md text-on-surface">45,000</td>
+<td class="px-8 py-5 text-right">
+<div class="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-error transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Staff Member 2 -->
+<tr class="zebra-row hover:bg-surface-container-highest transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img alt="Marcus Vane" data-alt="Headshot of a friendly male gym receptionist in his early 30s. He is wearing a branded black GymX polo shirt and has a warm, welcoming smile. The background shows a clean, modern reception desk made of dark wood and brushed metal, illuminated by soft, overhead warm light and deep blue accent LEDs." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyECC0I5MN8nM416MfPuWlH01eMBFSZ3yhkhlNTLoqCvQ1nkAE5kX-N2T6Gl93t0eru15FSYaFk_1BtxAKBW_51WX0j1x4TvzC0-OKvq4SWvovsQsUULT1tyHFil26PuU_tRe8zpfJ42iu9Kd4LUm2N6CPmLeRTUDQRh3BMdH_vDxC4YZ9DxQTqgmzyM3-zjqacd7K4mZdyoehYHN7kYVp05prwb1AQ8zdFuh0BeU8EMxfyIjoleRPjxT0-R-iAQQirCW3L0J1MYOY"/>
+</div>
+<div>
+<p class="font-body-md text-body-md font-bold text-on-surface">Marcus Vane</p>
+<p class="text-xs text-on-surface-variant">marcus.v@gymx.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-body-md text-body-md text-on-surface-variant">@mvane_admin</td>
+<td class="px-6 py-5">
+<span class="bg-tertiary/10 text-tertiary border border-tertiary/20 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">Receptionist</span>
+</td>
+<td class="px-6 py-5 font-body-md text-body-md text-on-surface-variant">+251 922 888 999</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-surface-variant"></div>
+<span class="text-on-surface-variant font-label-sm text-label-sm">Offline</span>
+</div>
+</td>
+<td class="px-6 py-5 font-body-md text-body-md text-on-surface">22,500</td>
+<td class="px-8 py-5 text-right">
+<div class="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-error transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Staff Member 3 -->
+<tr class="zebra-row hover:bg-surface-container-highest transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img alt="Elena Rodriguez" data-alt="Professional studio portrait of a senior yoga instructor with a serene and balanced expression. She is wearing high-quality dark violet yoga attire. The aesthetic is clean and minimalist, with a dark slate background and subtle warm glowing light that suggests a peaceful, elite wellness studio environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7VH_Uy4Lkq8Fe3bQoo53xHr7E0xNc6s9sAspnrtu8_RBPs6A-qkZ76Rx95h8o1mpoCgIEeSJP44Uldn8szV6qdokKlqOxxvKlGN8TTaEtyYTqxlK8lPl232Q0evtLwlhP-pgGX8H2H7koJ50FD4XtlgGtu1S_oNbzaHOs0PIYfGyQbkLsjH3heaSzLOs0CZ5HCy7DgujnnLqP8y9nk_MrII9zFKHptThkuE99u9gXOUDiWTfUbdLmnCPSeGQNHaiTBChJxBHL3HvL"/>
+</div>
+<div>
+<p class="font-body-md text-body-md font-bold text-on-surface">Elena Rodriguez</p>
+<p class="text-xs text-on-surface-variant">elena.r@gymx.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-body-md text-body-md text-on-surface-variant">@erodriguez_yoga</td>
+<td class="px-6 py-5">
+<span class="bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">Elite Trainer</span>
+</td>
+<td class="px-6 py-5 font-body-md text-body-md text-on-surface-variant">+251 933 111 222</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+<span class="text-emerald-500 font-label-sm text-label-sm">Active Now</span>
+</div>
+</td>
+<td class="px-6 py-5 font-body-md text-body-md text-on-surface">38,000</td>
+<td class="px-8 py-5 text-right">
+<div class="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-error transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-8 py-6 flex items-center justify-between bg-surface-container-low border-t border-outline-variant/10">
+<p class="text-label-sm text-on-surface-variant">Showing 1 to 10 of 42 employees</p>
+<div class="flex gap-2">
+<button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-highest">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-on-primary-fixed font-bold">1</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-highest">2</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-highest">3</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-highest">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer (Shared Component) -->
+<footer class="w-full py-base flex justify-between items-center px-gutter border-t border-outline-variant/10 bg-surface-container-lowest mt-12">
+<p class="font-label-sm text-label-sm text-on-surface-variant">© 2024 GymX Management v2.4.0</p>
+<div class="flex gap-6">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary underline transition-colors" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary underline transition-colors" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary underline transition-colors" href="#">Support</a>
+</div>
+</footer>
+</main>
+<!-- Modal Overlay: Add Staff (Static Representation) -->
+<div class="fixed inset-0 bg-background/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6 hidden">
+<!-- Hidden by default, included for UI layout demonstration -->
+<div class="card-layer-1 w-full max-w-2xl bg-[#242b45] shadow-2xl overflow-hidden">
+<div class="px-8 py-6 border-b border-outline-variant/20 flex justify-between items-center">
+<h3 class="font-headline-md text-headline-md">Add New Staff Member</h3>
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-8 space-y-6">
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Full Name</label>
+<input class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="e.g. John Doe" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Staff ID / Username</label>
+<input class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="@jdoe_staff" type="text"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Staff Role</label>
+<div class="grid grid-cols-2 gap-4">
+<div class="p-4 rounded-xl border-2 border-primary bg-primary/5 cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">fitness_center</span>
+<div>
+<p class="font-label-sm text-label-sm font-bold text-on-surface">Trainer</p>
+<p class="text-[10px] text-on-surface-variant">Personalized sessions &amp; floor duty</p>
+</div>
+</div>
+</div>
+<div class="p-4 rounded-xl border border-outline-variant/30 hover:border-outline transition-colors cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined">support_agent</span>
+<div>
+<p class="font-label-sm text-label-sm font-bold text-on-surface">Receptionist</p>
+<p class="text-[10px] text-on-surface-variant">Front desk &amp; member relations</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Role Specific Fields: Trainer Example -->
+<div class="grid grid-cols-2 gap-6 pt-4 border-t border-outline-variant/10">
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Specialization</label>
+<select class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none appearance-none">
+<option>Bodybuilding</option>
+<option>Yoga &amp; Pilates</option>
+<option>Crossfit</option>
+<option>Weight Loss</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Certification Level</label>
+<select class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none appearance-none">
+<option>Level 1 - Junior</option>
+<option>Level 2 - Professional</option>
+<option>Level 3 - Master Elite</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Monthly Salary (ETB)</label>
+<input class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="25,000" type="number"/>
+</div>
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant">Phone Number</label>
+<input class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary focus:outline-none" placeholder="+251 9..." type="tel"/>
+</div>
+</div>
+</div>
+<div class="px-8 py-6 bg-surface-container-high flex justify-end gap-4">
+<button class="px-6 py-2 rounded-xl font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-colors">Cancel</button>
+<button class="primary-gradient text-on-primary-fixed px-8 py-2 rounded-xl font-label-sm text-label-sm shadow-[0_0_20px_rgba(207,188,255,0.3)]">Confirm &amp; Add Staff</button>
+</div>
+</div>
+</div>
+</body></html>

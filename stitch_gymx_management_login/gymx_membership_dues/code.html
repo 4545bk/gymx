@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GymX Membership Dues Tracking</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#36343a",
+                        "inverse-on-surface": "#322f35",
+                        "inverse-primary": "#6750a4",
+                        "on-secondary-fixed-variant": "#4b4263",
+                        "surface-container-highest": "#36343a",
+                        "outline": "#948e9c",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#594400",
+                        "surface-dim": "#141218",
+                        "on-primary": "#381e72",
+                        "tertiary-container": "#c9a74d",
+                        "secondary": "#cdc0e9",
+                        "secondary-fixed-dim": "#cdc0e9",
+                        "on-tertiary-fixed": "#241a00",
+                        "surface-tint": "#cfbcff",
+                        "background": "#141218",
+                        "surface-bright": "#3b383e",
+                        "outline-variant": "#494551",
+                        "on-primary-fixed": "#22005d",
+                        "tertiary-fixed": "#ffdf93",
+                        "surface-container": "#211f24",
+                        "surface": "#141218",
+                        "primary-fixed-dim": "#cfbcff",
+                        "tertiary-fixed-dim": "#e7c365",
+                        "on-surface-variant": "#cbc4d2",
+                        "error": "#ffb4ab",
+                        "primary-container": "#6750a4",
+                        "surface-container-lowest": "#0f0d13",
+                        "on-surface": "#e6e0e9",
+                        "secondary-container": "#4d4465",
+                        "on-tertiary-container": "#503d00",
+                        "on-background": "#e6e0e9",
+                        "secondary-fixed": "#e9ddff",
+                        "on-tertiary": "#3e2e00",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary": "#342b4b",
+                        "on-primary-fixed-variant": "#4f378a",
+                        "on-error": "#690005",
+                        "primary": "#cfbcff",
+                        "primary-fixed": "#e9ddff",
+                        "on-secondary-container": "#bfb2da",
+                        "surface-container-low": "#1d1b20",
+                        "tertiary": "#e7c365",
+                        "surface-container-high": "#2b292f",
+                        "on-primary-container": "#e0d2ff",
+                        "inverse-surface": "#e6e0e9",
+                        "on-secondary-fixed": "#1f1635"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "base": "4px",
+                        "container-max": "1440px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "display": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label-sm": ["13px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #0a0e1a; color: #e6e0e9; font-family: 'Inter', sans-serif; }
+        .glass-card { background: #1a1f35; border: 1px solid #1e293b; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+        .status-paid { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+        .status-partial { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .status-unpaid { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .status-overdue { background: rgba(220, 38, 38, 0.1); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.3); }
+        .zebra-row:nth-child(even) { background-color: rgba(255, 255, 255, 0.02); }
+    </style>
+</head>
+<body class="flex min-h-screen overflow-x-hidden">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-surface-dim/80 backdrop-blur-xl border-r border-outline-variant/30 shadow-2xl flex flex-col py-base z-50">
+<div class="px-gutter py-6">
+<h1 class="font-display text-display bg-gradient-to-r from-primary to-tertiary bg-clip-text text-transparent text-[28px]">GymX</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant tracking-widest mt-1">ELITE MANAGEMENT</p>
+</div>
+<nav class="flex-1 px-4 space-y-2 mt-4">
+<div class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors cursor-pointer">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-sm text-label-sm">Overview</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary font-bold border-r-4 border-primary bg-primary/10 transition-colors cursor-pointer">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-label-sm text-label-sm">Management</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors cursor-pointer">
+<span class="material-symbols-outlined">settings_applications</span>
+<span class="font-label-sm text-label-sm">Operations</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors cursor-pointer">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-sm text-label-sm">Commerce</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors cursor-pointer">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="font-label-sm text-label-sm">Admin</span>
+</div>
+</nav>
+<div class="px-4 py-6 border-t border-outline-variant/10 space-y-2">
+<div class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors cursor-pointer">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-sm text-label-sm">Support</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-highest transition-colors cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-64 flex flex-col">
+<!-- TopNavBar -->
+<header class="sticky top-0 w-full bg-surface/50 backdrop-blur-lg border-b border-outline-variant/20 shadow-md h-16 flex justify-between items-center px-gutter z-40">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-md text-headline-md text-primary">Membership Dues</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+<input class="bg-surface-container-low border border-outline-variant/30 rounded-full py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:border-primary w-64" placeholder="Search members..." type="text"/>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">mail</span>
+<div class="h-8 w-8 rounded-full bg-primary-container flex items-center justify-center overflow-hidden border border-primary/20">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a fitness facility administrator with a clean, modern aesthetic. The individual is a male in his mid-30s wearing a dark navy performance polo shirt with a subtle GymX logo. The background is a soft-focus high-end gym interior with deep blue lighting and sleek equipment. The overall tone is corporate, authoritative, and sophisticated." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9cg4xMmvzO01vc0Y_Ux9WvqsJI4X6JxhXLyaqs3mIuqQqcZFI3FIE3gwSmMybdjY36DLBHkb2LITcULywIZIMx4xs5TdnnP3O5Dr8L4ArwTRB1mjErwaiH91Z1q1n1hF30wvHbUgW5kcqaxwwcLTVnF4Ujnm9BaRZOCZf8NQSoLRLajU9677t6RNjQpABi72Cno4pIYdG6M3WT3ATvjy1hHkd1I_EFthF9HPrLOWjQzrE6Z5RvF1TfknoMj-PLNWHH0R5qvfL7b7V"/>
+</div>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-full font-label-sm text-label-sm hover:opacity-90 transition-all shadow-lg shadow-primary/20">Check-in</button>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="p-8 max-w-[1440px] mx-auto w-full">
+<!-- Overview Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<!-- Paid Card -->
+<div class="glass-card p-6 border-l-4 border-l-[#22c55e]">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-[#22c55e]/10 rounded-lg text-[#22c55e]">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<span class="text-xs font-label-sm text-[#22c55e] px-2 py-0.5 bg-[#22c55e]/10 rounded-full">+12% vs last month</span>
+</div>
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-1 uppercase tracking-wider">Paid Members</p>
+<h3 class="font-headline-lg text-headline-lg text-white">198</h3>
+</div>
+<!-- Partial Card -->
+<div class="glass-card p-6 border-l-4 border-l-[#f59e0b]">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-[#f59e0b]/10 rounded-lg text-[#f59e0b]">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+</div>
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-1 uppercase tracking-wider">Partial Payments</p>
+<h3 class="font-headline-lg text-headline-lg text-white">24</h3>
+<p class="text-sm font-label-sm text-[#f59e0b] mt-1">12,400 ETB Outstanding</p>
+</div>
+<!-- Unpaid Card -->
+<div class="glass-card p-6 border-l-4 border-l-[#ef4444]">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-[#ef4444]/10 rounded-lg text-[#ef4444]">
+<span class="material-symbols-outlined">error_outline</span>
+</div>
+</div>
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-1 uppercase tracking-wider">Unpaid Members</p>
+<h3 class="font-headline-lg text-headline-lg text-white">67</h3>
+<p class="text-sm font-label-sm text-[#ef4444] mt-1">53,600 ETB Outstanding</p>
+</div>
+<!-- Overdue Card -->
+<div class="glass-card p-6 border-l-4 border-l-[#dc2626] relative overflow-hidden">
+<div class="absolute -right-4 -top-4 w-24 h-24 bg-[#dc2626]/5 rounded-full blur-2xl"></div>
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-[#dc2626]/10 rounded-lg text-[#dc2626] animate-pulse">
+<span class="material-symbols-outlined">warning</span>
+</div>
+</div>
+<p class="text-on-surface-variant font-label-sm text-label-sm mb-1 uppercase tracking-wider">Overdue</p>
+<h3 class="font-headline-lg text-headline-lg text-white">14</h3>
+<p class="text-sm font-label-sm text-[#dc2626] mt-1">11,200 ETB Outstanding</p>
+</div>
+</div>
+<!-- Filters -->
+<div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+<div class="flex bg-surface-container-low p-1 rounded-xl border border-outline-variant/20">
+<button class="px-6 py-2 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm shadow-md">All</button>
+<button class="px-6 py-2 rounded-lg text-on-surface-variant hover:text-white font-label-sm text-label-sm transition-colors">Paid</button>
+<button class="px-6 py-2 rounded-lg text-on-surface-variant hover:text-white font-label-sm text-label-sm transition-colors">Partial</button>
+<button class="px-6 py-2 rounded-lg text-on-surface-variant hover:text-white font-label-sm text-label-sm transition-colors">Unpaid</button>
+<button class="px-6 py-2 rounded-lg text-on-surface-variant hover:text-white font-label-sm text-label-sm transition-colors">Overdue</button>
+</div>
+<div class="relative w-full md:w-80">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-high border border-outline-variant/30 rounded-xl py-2.5 pl-10 pr-4 text-white focus:ring-1 focus:ring-primary focus:outline-none transition-all" placeholder="Filter by member name..." type="text"/>
+</div>
+</div>
+<!-- Dues Table -->
+<div class="glass-card overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-highest/50 border-b border-outline-variant/20">
+<tr>
+<th class="px-gutter py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Member</th>
+<th class="px-gutter py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Plan</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Total Due</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Paid</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Remaining</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-gutter py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Row 1: Overdue -->
+<tr class="zebra-row hover:bg-white/5 transition-colors">
+<td class="px-gutter py-4">
+<div class="font-body-md font-bold text-white">Dawit Kebede</div>
+<div class="text-[10px] text-outline uppercase font-label-sm">MBR-0941</div>
+</td>
+<td class="px-gutter py-4 text-on-surface-variant font-label-sm">Full Week — 800 ETB/mo</td>
+<td class="px-6 py-4 font-body-md text-white">800 ETB</td>
+<td class="px-6 py-4 font-body-md text-on-surface-variant">0 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#dc2626] font-bold">800 ETB</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase status-overdue">Overdue</span>
+</td>
+<td class="px-gutter py-4 text-right space-x-2">
+<button class="bg-primary/20 hover:bg-primary text-primary hover:text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all">Record Payment</button>
+<button class="text-outline hover:text-white px-2 py-1.5 rounded-lg text-[12px] transition-colors"><span class="material-symbols-outlined align-middle">history</span></button>
+</td>
+</tr>
+<!-- Row 2: Paid -->
+<tr class="zebra-row hover:bg-white/5 transition-colors">
+<td class="px-gutter py-4">
+<div class="font-body-md font-bold text-white">Salem Tesfaye</div>
+<div class="text-[10px] text-outline uppercase font-label-sm">MBR-1122</div>
+</td>
+<td class="px-gutter py-4 text-on-surface-variant font-label-sm">Full Week — 800 ETB/mo</td>
+<td class="px-6 py-4 font-body-md text-white">800 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#22c55e]">800 ETB</td>
+<td class="px-6 py-4 font-body-md text-on-surface-variant">0 ETB</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase status-paid">Paid</span>
+</td>
+<td class="px-gutter py-4 text-right space-x-2">
+<button class="bg-primary/10 text-outline cursor-not-allowed opacity-50 px-3 py-1.5 rounded-lg text-[12px] font-bold">Record Payment</button>
+<button class="text-outline hover:text-white px-2 py-1.5 rounded-lg text-[12px] transition-colors"><span class="material-symbols-outlined align-middle">history</span></button>
+</td>
+</tr>
+<!-- Row 3: Partial -->
+<tr class="zebra-row hover:bg-white/5 transition-colors">
+<td class="px-gutter py-4">
+<div class="font-body-md font-bold text-white">Elias Girma</div>
+<div class="text-[10px] text-outline uppercase font-label-sm">MBR-0845</div>
+</td>
+<td class="px-gutter py-4 text-on-surface-variant font-label-sm">Full Week — 800 ETB/mo</td>
+<td class="px-6 py-4 font-body-md text-white">800 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#f59e0b]">500 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#ef4444] font-bold">300 ETB</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase status-partial">Partial</span>
+</td>
+<td class="px-gutter py-4 text-right space-x-2">
+<button class="bg-primary/20 hover:bg-primary text-primary hover:text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all">Record Payment</button>
+<button class="text-outline hover:text-white px-2 py-1.5 rounded-lg text-[12px] transition-colors"><span class="material-symbols-outlined align-middle">history</span></button>
+</td>
+</tr>
+<!-- Row 4: Unpaid -->
+<tr class="zebra-row hover:bg-white/5 transition-colors">
+<td class="px-gutter py-4">
+<div class="font-body-md font-bold text-white">Bethlehem Assefa</div>
+<div class="text-[10px] text-outline uppercase font-label-sm">MBR-2201</div>
+</td>
+<td class="px-gutter py-4 text-on-surface-variant font-label-sm">Premium Plus — 1,200 ETB/mo</td>
+<td class="px-6 py-4 font-body-md text-white">1,200 ETB</td>
+<td class="px-6 py-4 font-body-md text-on-surface-variant">0 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#ef4444] font-bold">1,200 ETB</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase status-unpaid">Unpaid</span>
+</td>
+<td class="px-gutter py-4 text-right space-x-2">
+<button class="bg-primary/20 hover:bg-primary text-primary hover:text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all">Record Payment</button>
+<button class="text-outline hover:text-white px-2 py-1.5 rounded-lg text-[12px] transition-colors"><span class="material-symbols-outlined align-middle">history</span></button>
+</td>
+</tr>
+<!-- Row 5: Overdue -->
+<tr class="zebra-row hover:bg-white/5 transition-colors">
+<td class="px-gutter py-4">
+<div class="font-body-md font-bold text-white">Yohannes Negash</div>
+<div class="text-[10px] text-outline uppercase font-label-sm">MBR-0312</div>
+</td>
+<td class="px-gutter py-4 text-on-surface-variant font-label-sm">Basic Tier — 500 ETB/mo</td>
+<td class="px-6 py-4 font-body-md text-white">500 ETB</td>
+<td class="px-6 py-4 font-body-md text-on-surface-variant">0 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#dc2626] font-bold">500 ETB</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase status-overdue">Overdue</span>
+</td>
+<td class="px-gutter py-4 text-right space-x-2">
+<button class="bg-primary/20 hover:bg-primary text-primary hover:text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all">Record Payment</button>
+<button class="text-outline hover:text-white px-2 py-1.5 rounded-lg text-[12px] transition-colors"><span class="material-symbols-outlined align-middle">history</span></button>
+</td>
+</tr>
+<!-- Row 6: Partial -->
+<tr class="zebra-row hover:bg-white/5 transition-colors">
+<td class="px-gutter py-4">
+<div class="font-body-md font-bold text-white">Marta Solomon</div>
+<div class="text-[10px] text-outline uppercase font-label-sm">MBR-0994</div>
+</td>
+<td class="px-gutter py-4 text-on-surface-variant font-label-sm">Full Week — 800 ETB/mo</td>
+<td class="px-6 py-4 font-body-md text-white">800 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#f59e0b]">400 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#ef4444] font-bold">400 ETB</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase status-partial">Partial</span>
+</td>
+<td class="px-gutter py-4 text-right space-x-2">
+<button class="bg-primary/20 hover:bg-primary text-primary hover:text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all">Record Payment</button>
+<button class="text-outline hover:text-white px-2 py-1.5 rounded-lg text-[12px] transition-colors"><span class="material-symbols-outlined align-middle">history</span></button>
+</td>
+</tr>
+<!-- Row 7: Paid -->
+<tr class="zebra-row hover:bg-white/5 transition-colors">
+<td class="px-gutter py-4">
+<div class="font-body-md font-bold text-white">Abel Tsegaye</div>
+<div class="text-[10px] text-outline uppercase font-label-sm">MBR-1506</div>
+</td>
+<td class="px-gutter py-4 text-on-surface-variant font-label-sm">Premium Plus — 1,200 ETB/mo</td>
+<td class="px-6 py-4 font-body-md text-white">1,200 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#22c55e]">1,200 ETB</td>
+<td class="px-6 py-4 font-body-md text-on-surface-variant">0 ETB</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase status-paid">Paid</span>
+</td>
+<td class="px-gutter py-4 text-right space-x-2">
+<button class="bg-primary/10 text-outline cursor-not-allowed opacity-50 px-3 py-1.5 rounded-lg text-[12px] font-bold">Record Payment</button>
+<button class="text-outline hover:text-white px-2 py-1.5 rounded-lg text-[12px] transition-colors"><span class="material-symbols-outlined align-middle">history</span></button>
+</td>
+</tr>
+<!-- Row 8: Unpaid -->
+<tr class="zebra-row hover:bg-white/5 transition-colors">
+<td class="px-gutter py-4">
+<div class="font-body-md font-bold text-white">Saba Mebratu</div>
+<div class="text-[10px] text-outline uppercase font-label-sm">MBR-0417</div>
+</td>
+<td class="px-gutter py-4 text-on-surface-variant font-label-sm">Full Week — 800 ETB/mo</td>
+<td class="px-6 py-4 font-body-md text-white">800 ETB</td>
+<td class="px-6 py-4 font-body-md text-on-surface-variant">0 ETB</td>
+<td class="px-6 py-4 font-body-md text-[#ef4444] font-bold">800 ETB</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 rounded-full text-[11px] font-bold uppercase status-unpaid">Unpaid</span>
+</td>
+<td class="px-gutter py-4 text-right space-x-2">
+<button class="bg-primary/20 hover:bg-primary text-primary hover:text-on-primary px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all">Record Payment</button>
+<button class="text-outline hover:text-white px-2 py-1.5 rounded-lg text-[12px] transition-colors"><span class="material-symbols-outlined align-middle">history</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Table Footer -->
+<div class="px-gutter py-4 bg-surface-container-low/30 border-t border-outline-variant/10 flex justify-between items-center">
+<p class="text-sm font-label-sm text-on-surface-variant">Showing 8 of 303 members</p>
+<div class="flex gap-2">
+<button class="p-2 border border-outline-variant/30 rounded-lg text-outline hover:text-white transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-2 border border-outline-variant/30 rounded-lg text-outline hover:text-white transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="mt-auto w-full bg-surface-container-lowest border-t border-outline-variant/10 flex justify-between items-center px-gutter py-4">
+<p class="font-label-sm text-label-sm text-on-surface-variant">© 2024 GymX Systems. v2.4.0 (ETB)</p>
+<div class="flex gap-6">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:underline hover:text-primary transition-colors" href="#">Documentation</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:underline hover:text-primary transition-colors" href="#">Support</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:underline hover:text-primary transition-colors" href="#">Legal</a>
+</div>
+</footer>
+</main>
+<!-- Contextual Floating Action Button -->
+<button class="fixed bottom-8 right-8 bg-gradient-to-br from-primary to-tertiary text-on-primary-container p-4 rounded-2xl shadow-2xl hover:scale-105 transition-transform flex items-center gap-3 z-50">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+<span class="font-bold text-sm tracking-wide">Record Payment</span>
+</button>
+</body></html>

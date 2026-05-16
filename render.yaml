@@ -1,0 +1,34 @@
+# ═══════════════════════════════════════════════════════════
+# GymX — Render Blueprint (Backend API)
+# Deploy: Connect GitHub repo → Render auto-detects this file
+# ═══════════════════════════════════════════════════════════
+
+services:
+  - type: web
+    name: gymx-api
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false  # Set manually in Render dashboard
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: SCANNER_API_KEY
+        generateValue: true
+      - key: NEXT_PUBLIC_API_URL
+        sync: false  # e.g. https://gymx-api.onrender.com/api/v1
+      - key: GYM_TIMEZONE
+        value: Africa/Addis_Ababa
+    healthCheckPath: /health
