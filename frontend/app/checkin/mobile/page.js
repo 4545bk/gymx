@@ -32,14 +32,16 @@ export default function MobileScannerPage() {
   const timeoutRef = useRef(null);
   const jsQRRef = useRef(null);
 
-  // Auto-detect API URL: when accessed from phone over LAN, use the same hostname
-  // Use HTTPS if the page is loaded over HTTPS
+  // ─── API URL: auto-detect for both local dev and production ──
   const API_BASE = typeof window !== 'undefined'
-    ? `http://${window.location.hostname}:5000/api/v1`
-    : (process.env.NEXT_PUBLIC_API_URL || '/api/v1');
+    ? (process.env.NEXT_PUBLIC_API_URL
+      || (window.location.hostname === 'localhost' || window.location.hostname.match(/^192\.168/) || window.location.hostname.match(/^10\./)
+        ? `http://${window.location.hostname}:5000/api/v1`
+        : '/api/v1'))
+    : '/api/v1';
   const SCANNER_KEY = 'gymx-scanner-api-key-dev-only-change-in-prod';
 
-  // Load jsQR library from CDN — try multiple CDNs for reliability
+  // Load jsQR library from CDN
   useEffect(() => {
     const cdnUrls = [
       'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
@@ -53,7 +55,7 @@ export default function MobileScannerPage() {
       if (index >= cdnUrls.length || loaded) {
         if (!loaded) {
           setLoadingLib(false);
-          setError('Could not load QR scanner library. Check your internet connection and refresh the page.');
+          setError('Could not load QR scanner library. Check internet and refresh.');
         }
         return;
       }
@@ -67,21 +69,15 @@ export default function MobileScannerPage() {
           jsQRRef.current = window.jsQR;
           setLibLoaded(true);
           setLoadingLib(false);
-          console.log('✅ QR scanner library loaded from:', cdnUrls[index]);
         } else {
           tryLoad(index + 1);
         }
       };
-      script.onerror = () => {
-        console.warn('Failed CDN:', cdnUrls[index]);
-        tryLoad(index + 1);
-      };
+      script.onerror = () => tryLoad(index + 1);
       document.head.appendChild(script);
     };
 
-    // Check if BarcodeDetector is available (Chrome Android) — use it as primary
     if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
-      console.log('✅ Using native BarcodeDetector');
       jsQRRef.current = 'native';
       setLibLoaded(true);
       setLoadingLib(false);
@@ -90,14 +86,14 @@ export default function MobileScannerPage() {
     }
   }, []);
 
-  // Sound effect
+  // Sound
   const playSound = useCallback((type) => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
-      gain.gain.value = 0.1;
+      gain.gain.value = 0.12;
       if (type === 'granted') {
         osc.frequency.value = 880; osc.type = 'sine';
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
@@ -110,11 +106,11 @@ export default function MobileScannerPage() {
     } catch (e) {}
   }, []);
 
-  // Vibrate on scan
+  // Vibrate
   const vibrate = useCallback((type) => {
     try {
       if (navigator.vibrate) {
-        navigator.vibrate(type === 'granted' ? [100] : [100, 50, 100]);
+        navigator.vibrate(type === 'granted' ? [100, 50, 100] : [200, 100, 200]);
       }
     } catch (e) {}
   }, []);
@@ -141,68 +137,47 @@ export default function MobileScannerPage() {
       playSound(data.data.result);
       vibrate(data.data.result);
     } catch (err) {
-      setResult({ result: 'denied', denyReason: 'error', message: 'Network error — check WiFi connection' });
+      setResult({ result: 'denied', denyReason: 'error', message: 'Network error — check WiFi' });
       playSound('denied');
+      vibrate('denied');
     }
 
     setScanning(false);
     setManualId('');
     clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => { setResult(null); cooldownRef.current = false; }, 3500);
+    const timeout = result?.result === 'granted' ? 3500 : 5000;
+    timeoutRef.current = setTimeout(() => { setResult(null); cooldownRef.current = false; }, timeout);
   }, [API_BASE, SCANNER_KEY, scanning, playSound, vibrate]);
 
-  // Check if camera/HTTPS is available
+  // Camera
   const isCameraAvailable = () => {
     if (typeof window === 'undefined') return false;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
-    return true;
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   };
 
-  // Start camera
   const startCamera = useCallback(async () => {
     setError('');
-
-    // Check HTTPS requirement
     if (!isCameraAvailable()) {
       const isHTTP = typeof window !== 'undefined' && window.location.protocol === 'http:';
       if (isHTTP && window.location.hostname !== 'localhost') {
-        setError(
-          '🔒 Camera requires HTTPS! Restart frontend with: npm run dev (HTTPS is now enabled). ' +
-          'Then open: https://' + window.location.host + '/checkin/mobile — Accept the security warning and try again.'
-        );
+        setError('🔒 Camera requires HTTPS! Use the deployed Vercel URL or run: npm run dev');
       } else {
-        setError('Camera not available on this device or browser.');
+        setError('Camera not available on this device/browser.');
       }
       return;
     }
-
-    if (!libLoaded) {
-      setError('QR scanner library is still loading. Please wait and try again...');
-      return;
-    }
+    if (!libLoaded) { setError('Scanner library still loading...'); return; }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: cameraFacing,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
+        video: { facingMode: cameraFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
       });
       streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
       setCameraActive(true);
-
-      // Wait for video to stabilize
       await new Promise(r => setTimeout(r, 500));
 
-      // Start scanning loop
       if (jsQRRef.current === 'native') {
-        // Use native BarcodeDetector (Chrome Android)
         const detector = new BarcodeDetector({ formats: ['qr_code'] });
         const scanFrame = async () => {
           if (!videoRef.current || !streamRef.current) return;
@@ -217,7 +192,6 @@ export default function MobileScannerPage() {
         };
         scanLoopRef.current = requestAnimationFrame(scanFrame);
       } else {
-        // Use jsQR library (all other browsers)
         const scanFrame = () => {
           const video = videoRef.current;
           const canvas = canvasRef.current;
@@ -225,42 +199,27 @@ export default function MobileScannerPage() {
             scanLoopRef.current = requestAnimationFrame(scanFrame);
             return;
           }
-
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
           if (jsQRRef.current && !cooldownRef.current) {
-            const code = jsQRRef.current(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'dontInvert',
-            });
-            if (code && code.data) {
-              console.log('📱 QR Scanned:', code.data);
-              processCheckin(code.data);
-            }
+            const code = jsQRRef.current(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+            if (code && code.data) processCheckin(code.data);
           }
-
           scanLoopRef.current = requestAnimationFrame(scanFrame);
         };
         scanLoopRef.current = requestAnimationFrame(scanFrame);
       }
     } catch (err) {
-      if (err.name === 'NotAllowedError') {
-        setError('Camera permission denied. Check browser settings and allow camera access.');
-      } else if (err.name === 'NotFoundError') {
-        setError('No camera found on this device.');
-      } else if (err.name === 'NotReadableError') {
-        setError('Camera is in use by another app. Close other apps using the camera and try again.');
-      } else {
-        setError(`Camera error: ${err.message}`);
-      }
+      if (err.name === 'NotAllowedError') setError('Camera permission denied. Check browser settings.');
+      else if (err.name === 'NotFoundError') setError('No camera found.');
+      else if (err.name === 'NotReadableError') setError('Camera in use by another app.');
+      else setError(`Camera error: ${err.message}`);
     }
   }, [processCheckin, cameraFacing, libLoaded]);
 
-  // Stop camera
   const stopCamera = useCallback(() => {
     if (scanLoopRef.current) cancelAnimationFrame(scanLoopRef.current);
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
@@ -268,21 +227,9 @@ export default function MobileScannerPage() {
     setCameraActive(false);
   }, []);
 
-  // Flip camera
-  const flipCamera = useCallback(() => {
+  const handleFlipAndRestart = () => {
     stopCamera();
     setCameraFacing(prev => prev === 'environment' ? 'user' : 'environment');
-  }, [stopCamera]);
-
-  // Re-start camera after flip
-  useEffect(() => {
-    if (!cameraActive && streamRef.current === null && cameraFacing) {
-      // Don't auto-start on mount — only after explicit flip
-    }
-  }, [cameraFacing]);
-
-  const handleFlipAndRestart = () => {
-    flipCamera();
     setTimeout(() => startCamera(), 300);
   };
 
@@ -290,13 +237,12 @@ export default function MobileScannerPage() {
 
   const getDenial = (r) => DENIAL_MAP[r] || { label: 'Denied', icon: '❌' };
 
-  const [clientInfo, setClientInfo] = useState({ isHTTPS: false, isLocalhost: true, canUseCamera: false, host: '' });
+  const [clientInfo, setClientInfo] = useState({ isHTTPS: false, isLocalhost: true, canUseCamera: false });
   useEffect(() => {
     setClientInfo({
       isHTTPS: window.location.protocol === 'https:',
       isLocalhost: window.location.hostname === 'localhost',
       canUseCamera: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
-      host: window.location.host,
     });
   }, []);
   const { isHTTPS, isLocalhost, canUseCamera } = clientInfo;
@@ -306,12 +252,11 @@ export default function MobileScannerPage() {
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       background: 'var(--bg-primary)', color: 'var(--text-primary)',
     }}>
-      {/* Hidden canvas for QR processing */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       {/* Header */}
       <div style={{
-        padding: '1rem', textAlign: 'center',
+        padding: '0.75rem 1rem', textAlign: 'center',
         borderBottom: '1px solid var(--border)',
         background: 'var(--bg-card)',
       }}>
@@ -328,25 +273,21 @@ export default function MobileScannerPage() {
       {/* Content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem', gap: '1rem' }}>
 
-        {/* HTTPS Warning Banner */}
+        {/* HTTPS Warning */}
         {!isHTTPS && !isLocalhost && (
           <div style={{
             width: '100%', maxWidth: '400px', padding: '0.75rem',
             background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
             borderRadius: 'var(--radius-md)', fontSize: '0.8rem', color: 'var(--warning)',
           }}>
-            <strong>⚠️ Camera needs HTTPS</strong>
-            <br />
+            <strong>⚠️ Camera needs HTTPS</strong><br />
             <span style={{ fontSize: '0.75rem' }}>
-              To use camera scanning, open the standalone HTTPS scanner.<br />
-              Run in terminal: <code style={{ background: 'rgba(0,0,0,0.2)', padding: '0.125rem 0.375rem', borderRadius: '4px', fontSize: '0.7rem' }}>npm run scanner</code>
-              <br /><br />
+              Use the deployed Vercel URL for camera scanning.<br />
               <strong>Or use manual input below</strong> — type the member ID and tap Scan.
             </span>
           </div>
         )}
 
-        {/* Library loading indicator */}
         {loadingLib && (
           <div style={{
             width: '100%', maxWidth: '400px', padding: '0.75rem',
@@ -354,41 +295,83 @@ export default function MobileScannerPage() {
             fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center',
           }}>
             <div className="spinner" style={{ margin: '0 auto 0.5rem', width: '20px', height: '20px' }}></div>
-            Loading scanner library...
+            Loading scanner...
           </div>
         )}
 
-        {/* Result overlay */}
+        {/* ═══════════════════════════════════════════════════ */}
+        {/* FULL-SCREEN RESULT OVERLAY */}
+        {/* ═══════════════════════════════════════════════════ */}
         {result && (
           <div style={{
-            width: '100%', maxWidth: '400px', textAlign: 'center',
-            padding: '1.5rem', borderRadius: 'var(--radius-xl)',
-            border: `3px solid ${result.result === 'granted' ? 'var(--success)' : 'var(--danger)'}`,
-            background: result.result === 'granted' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-            animation: 'resultPop 350ms cubic-bezier(0.175,0.885,0.32,1.275)',
+            position: 'fixed', inset: 0, zIndex: 999,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            background: result.result === 'granted'
+              ? 'linear-gradient(135deg, rgba(16,185,129,0.95), rgba(5,150,105,0.98))'
+              : 'linear-gradient(135deg, rgba(239,68,68,0.95), rgba(185,28,28,0.98))',
+            animation: 'resultFadeIn 300ms ease',
+            padding: '2rem',
           }}>
-            <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>
+            {/* Big Icon */}
+            <div style={{
+              fontSize: '5rem', marginBottom: '1rem',
+              animation: result.result === 'granted' ? 'bounceIn 500ms ease' : 'shakeX 500ms ease',
+              filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.3))',
+            }}>
               {result.result === 'granted' ? '✅' : getDenial(result.denyReason).icon}
             </div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.375rem' }}>
+
+            {/* Member Name */}
+            <div style={{
+              fontSize: '2rem', fontWeight: 900, color: 'white',
+              textAlign: 'center', marginBottom: '0.5rem',
+              textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              animation: 'slideUp 400ms ease',
+            }}>
               {result.member?.fullName || 'Unknown'}
             </div>
+
+            {/* Result Badge */}
             <div style={{
-              display: 'inline-block', padding: '0.25rem 1rem', borderRadius: '9999px',
-              fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase',
-              background: result.result === 'granted' ? 'var(--success)' : 'var(--danger)',
+              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.5rem 1.5rem', borderRadius: '9999px',
+              fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              background: 'rgba(255,255,255,0.2)',
               color: 'white',
+              border: '2px solid rgba(255,255,255,0.4)',
+              animation: 'pulseGlow 1.5s ease infinite',
             }}>
               {result.result === 'granted' ? '✓ ACCESS GRANTED' : getDenial(result.denyReason).label}
             </div>
-            {result.member?.planType && result.result === 'granted' && (
-              <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Plan: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{result.member.planType}</span>
+
+            {/* Plan info (granted only) */}
+            {result.result === 'granted' && result.member?.planType && (
+              <div style={{
+                marginTop: '1rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)',
+                textTransform: 'capitalize', animation: 'slideUp 500ms ease',
+              }}>
+                Plan: <strong style={{ color: 'white' }}>{result.member.planType}</strong>
               </div>
             )}
-            {result.message && (
-              <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{result.message}</div>
+
+            {/* Denied message */}
+            {result.result === 'denied' && result.message && (
+              <div style={{
+                marginTop: '1rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)',
+                textAlign: 'center', maxWidth: '300px', animation: 'slideUp 500ms ease',
+              }}>
+                {result.message}
+              </div>
             )}
+
+            {/* Tap to dismiss */}
+            <div style={{
+              position: 'absolute', bottom: '2rem',
+              fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)',
+            }}>
+              Auto-dismissing...
+            </div>
           </div>
         )}
 
@@ -399,21 +382,14 @@ export default function MobileScannerPage() {
               <div style={{ position: 'relative', width: '100%', maxWidth: '400px', borderRadius: 'var(--radius-xl)', overflow: 'hidden', border: '2px solid var(--accent-primary)' }}>
                 <video ref={videoRef} style={{ width: '100%', display: 'block' }} playsInline muted />
                 {/* Scan overlay */}
-                <div style={{
-                  position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  pointerEvents: 'none',
-                }}>
-                  <div style={{
-                    width: '200px', height: '200px', position: 'relative',
-                  }}>
-                    {/* Animated scanning line */}
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                  <div style={{ width: '200px', height: '200px', position: 'relative' }}>
                     <div style={{
                       position: 'absolute', left: '5%', right: '5%',
                       height: '3px', background: 'var(--accent-primary)',
                       boxShadow: '0 0 12px var(--accent-primary)',
                       animation: 'scanLine 2s ease-in-out infinite',
                     }} />
-                    {/* Corner brackets */}
                     {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map(corner => {
                       const isTop = corner.includes('top');
                       const isLeft = corner.includes('left');
@@ -432,12 +408,8 @@ export default function MobileScannerPage() {
                     })}
                   </div>
                 </div>
-
-                {/* Camera controls */}
-                <div style={{
-                  position: 'absolute', bottom: '0.75rem', left: 0, right: 0,
-                  display: 'flex', justifyContent: 'center', gap: '0.5rem',
-                }}>
+                {/* Controls */}
+                <div style={{ position: 'absolute', bottom: '0.75rem', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
                   <button onClick={handleFlipAndRestart} style={{
                     padding: '0.5rem 0.75rem', background: 'rgba(0,0,0,0.6)',
                     color: 'white', border: 'none', borderRadius: 'var(--radius-md)',
@@ -458,7 +430,6 @@ export default function MobileScannerPage() {
                 cursor: libLoaded ? 'pointer' : 'not-allowed',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem',
                 color: 'var(--text-secondary)', opacity: libLoaded ? 1 : 0.5,
-                transition: 'all 200ms ease',
               }}>
                 <div style={{
                   width: '70px', height: '70px', borderRadius: '50%',
@@ -482,15 +453,11 @@ export default function MobileScannerPage() {
             width: '100%', maxWidth: '400px', padding: '0.75rem',
             background: 'var(--warning-bg)', borderRadius: 'var(--radius-md)',
             fontSize: '0.8rem', color: 'var(--warning)', textAlign: 'center',
-            lineHeight: 1.5,
           }}>{error}</div>
         )}
 
         {/* Divider */}
-        <div style={{
-          width: '100%', maxWidth: '400px', display: 'flex', alignItems: 'center', gap: '0.75rem',
-          marginTop: '0.5rem',
-        }}>
+        <div style={{ width: '100%', maxWidth: '400px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {canUseCamera ? 'or enter manually' : 'enter member ID'}
@@ -498,7 +465,7 @@ export default function MobileScannerPage() {
           <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
         </div>
 
-        {/* Manual Input (always visible — this is the fallback) */}
+        {/* Manual Input */}
         <div style={{ width: '100%', maxWidth: '400px' }}>
           <div style={{ display: 'flex', gap: '0.375rem' }}>
             <input
@@ -511,7 +478,7 @@ export default function MobileScannerPage() {
                 flex: 1, padding: '0.875rem', background: 'var(--bg-card)',
                 border: '2px solid var(--border)', borderRadius: 'var(--radius-md)',
                 color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: '1.05rem',
-                outline: 'none', letterSpacing: '0.03em',
+                outline: 'none',
               }}
             />
             <button
@@ -528,34 +495,41 @@ export default function MobileScannerPage() {
             >{scanning ? '...' : 'Scan'}</button>
           </div>
         </div>
-
-        {/* Info card */}
-        <div style={{
-          width: '100%', maxWidth: '400px', padding: '0.75rem',
-          background: 'var(--bg-card)', borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border)', fontSize: '0.75rem', color: 'var(--text-muted)',
-          lineHeight: 1.6,
-        }}>
-          <strong style={{ color: 'var(--text-secondary)' }}>📋 How to test:</strong>
-          <ol style={{ margin: '0.375rem 0 0', paddingLeft: '1.25rem' }}>
-            <li>Go to Members page on your computer</li>
-            <li>Click the QR icon on any member</li>
-            <li>Note the member ID (e.g. MBR-5F9E0005)</li>
-            <li>Type it above and tap Scan</li>
-          </ol>
-        </div>
       </div>
 
       <style>{`
-        @keyframes resultPop {
-          0% { opacity: 0; transform: scale(0.85); }
-          60% { transform: scale(1.03); }
-          100% { opacity: 1; transform: scale(1); }
+        @keyframes resultFadeIn {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        @keyframes bounceIn {
+          0% { transform: scale(0.3); opacity: 0; }
+          50% { transform: scale(1.1); }
+          70% { transform: scale(0.95); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes shakeX {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+          20%, 40%, 60%, 80% { transform: translateX(8px); }
+        }
+        @keyframes slideUp {
+          0% { transform: translateY(20px); opacity: 0; }
+          100% { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
+          50% { box-shadow: 0 0 0 12px rgba(255,255,255,0); }
         }
         @keyframes scanLine {
           0% { top: 5%; opacity: 0.5; }
           50% { top: 90%; opacity: 1; }
           100% { top: 5%; opacity: 0.5; }
+        }
+        @keyframes resultPop {
+          0% { opacity: 0; transform: scale(0.85); }
+          60% { transform: scale(1.03); }
+          100% { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </div>

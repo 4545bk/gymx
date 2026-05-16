@@ -853,6 +853,7 @@ tr:last-child td { border-bottom: none; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .equipment-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -874,8 +875,9 @@ tr:last-child td { border-bottom: none; }
   .main-content { margin-left: 0; }
 
   /* Topbar */
-  .topbar { padding: 0.75rem 1rem; }
+  .topbar { padding: 0.75rem 1rem; flex-wrap: wrap; gap: 0.5rem; }
   .topbar-left h1 { font-size: 1rem; }
+  .topbar-search { display: none; } /* Hide search on mobile — use page-level search */
 
   /* Page content */
   .page-content { padding: 1rem; }
@@ -883,34 +885,56 @@ tr:last-child td { border-bottom: none; }
   /* Grids */
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .equipment-grid { grid-template-columns: 1fr; }
 
   /* Stat cards compact */
   .stat-card { padding: 0.875rem 1rem; }
   .stat-value { font-size: 1.35rem; }
 
-  /* Tables */
-  .table-wrapper { border-radius: var(--radius-md); }
-  th, td { padding: 0.625rem 0.75rem; font-size: 0.8rem; }
+  /* Tables: horizontal scroll with touch */
+  .table-wrapper {
+    border-radius: var(--radius-md);
+    -webkit-overflow-scrolling: touch;
+  }
+  th, td { padding: 0.625rem 0.75rem; font-size: 0.8rem; white-space: nowrap; }
   th { font-size: 0.65rem; }
 
-  /* Modals */
+  /* Modals: near full-screen on mobile */
   .modal { width: 95%; max-width: none; padding: 1.25rem; max-height: 90vh; }
   .modal-header h2 { font-size: 1.1rem; }
+  .modal-footer { flex-wrap: wrap; }
 
   /* Cards */
   .card { padding: 1rem; }
 
-  /* Buttons */
-  .btn { padding: 0.5rem 1rem; font-size: 0.8rem; }
-  .btn-sm { padding: 0.325rem 0.625rem; font-size: 0.75rem; }
+  /* Buttons: touch-friendly min height */
+  .btn { padding: 0.5rem 1rem; font-size: 0.8rem; min-height: 38px; }
+  .btn-sm { padding: 0.325rem 0.625rem; font-size: 0.75rem; min-height: 32px; }
+  .btn-lg { padding: 0.625rem 1.25rem; }
+
+  /* Tab filters: scroll horizontally */
+  .tab-filters { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; gap: 0.375rem; padding-bottom: 0.25rem; }
+  .tab-filter { flex-shrink: 0; padding: 0.4rem 0.75rem; font-size: 0.75rem; }
 
   /* Check-in screen */
   .checkin-result { min-width: auto; width: 100%; padding: 2rem 1.5rem; }
   .checkin-result .name { font-size: 1.35rem; }
+
+  /* Form inputs: larger touch targets */
+  .form-input, .form-select { padding: 0.75rem 0.875rem; font-size: 1rem; min-height: 44px; }
+
+  /* Pagination */
+  .pagination { flex-direction: column; gap: 0.5rem; text-align: center; padding: 0.75rem; }
+
+  /* Alert items */
+  .alert-item { flex-direction: column; gap: 0.5rem; padding: 0.875rem 1rem; }
 }
 
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
-  .topbar-right { display: none; }
-  .pagination { flex-direction: column; gap: 0.5rem; text-align: center; }
+  .topbar-right .btn-secondary { display: none; } /* Hide check-in button on very small screens */
+  h1 { font-size: 1.35rem; }
+  h2 { font-size: 1.2rem; }
+  h3 { font-size: 1rem; }
 }
+

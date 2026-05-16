@@ -1,13 +1,13 @@
 /**
- * Card Generator — Generates printable permanent membership ID cards.
+ * Card Generator — Professional gym membership ID card.
  *
- * Design philosophy:
- *   - Card is a PERMANENT identity document (like an employee badge)
- *   - QR encodes ONLY the memberId — validated at scan time
- *   - NO expiry date, NO plan name, NO price on the card
- *   - Card is printed ONCE; reprints get the same issuedAt date
- *   - Standard CR80 credit card size (85.6mm × 54mm)
- *   - Uses PDFKit (same library as receiptGenerator.js)
+ * Design:
+ *   - Premium gradient header with gym logo + name
+ *   - Large circular member photo (centered)
+ *   - Bold member name + ID
+ *   - Large QR code for easy scanning
+ *   - Professional footer with gym info
+ *   - CR80 credit card size (85.6mm × 54mm)
  */
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
@@ -19,20 +19,18 @@ const { format } = require('date-fns');
 const W = 242.4;  // 85.6mm in points
 const H = 153.0;  // 54mm in points
 
-// ─── Layout zones ──────────────────────────────────────
-const HEADER_H = 40;
-const FOOTER_H = 28;
-const BODY_H = H - HEADER_H - FOOTER_H; // 85pt
-
-// ─── Colors (matches GymX design system) ───────────────
+// ─── Colors (GymX brand) ───────────────────────────────
 const C = {
-  headerBg: '#1A3C5E',
-  headerText: '#FFFFFF',
+  headerBg: '#1a1133',
+  headerGrad: '#2d1b69',
+  accent: '#7c3aed',
+  accentLight: '#a78bfa',
   bodyText: '#1C2833',
   bodySecondary: '#5D6D7E',
-  footerBg: '#F2F3F4',
-  footerText: '#5D6D7E',
-  placeholderBg: '#D5D8DC',
+  footerBg: '#f8f7fc',
+  footerText: '#6B7280',
+  white: '#FFFFFF',
+  placeholderBg: '#7c3aed',
 };
 
 // ─── Fetch image from URL or base64 data URI as Buffer ─
@@ -40,9 +38,13 @@ function fetchImageBuffer(url) {
   return new Promise((resolve) => {
     if (!url) return resolve(null);
 
-    // Handle base64 data URIs (stored member photos)
+    // Handle base64 data URIs
     if (url.startsWith('data:image/')) {
       try {
+        // Handle SVG data URIs
+        if (url.includes('data:image/svg+xml')) {
+          return resolve(null); // PDFKit can't render SVG directly, skip
+        }
         const base64Data = url.split(',')[1];
         if (!base64Data) return resolve(null);
         return resolve(Buffer.from(base64Data, 'base64'));
@@ -76,163 +78,167 @@ function getInitials(name) {
 }
 
 /**
- * Generate a permanent membership ID card as a PDF Buffer.
- * Pure utility — no Express req/res objects.
- *
- * @param {Object} member   - Member document (needs memberId, fullName, photoUrl, card.issuedAt)
- * @param {Object} settings - Gym settings (gymName, logoUrl, cardShowLogo, tagline, address)
- * @returns {Promise<Buffer>} - PDF file buffer
+ * Generate a professional membership ID card as PDF Buffer.
  */
 async function generateMemberCard(member, settings) {
   try {
-  // Ensure settings is a valid object
-  settings = settings || {};
+    settings = settings || {};
 
-  // 1. Generate QR code (encodes ONLY memberId)
-  const qrBuffer = await QRCode.toBuffer(member.memberId, {
-    type: 'png',
-    width: 240,
-    margin: 1,
-    color: { dark: C.headerBg, light: '#ffffff' },
-    errorCorrectionLevel: 'H',
-  });
-
-  // 2. Fetch images in parallel (fail silently)
-  const [logoBuffer, photoBuffer] = await Promise.all([
-    settings.cardShowLogo && settings.logoUrl ? fetchImageBuffer(settings.logoUrl) : null,
-    member.photoUrl ? fetchImageBuffer(member.photoUrl) : null,
-  ]);
-
-  // 3. Determine issue date (first print uses today, reprints use stored date)
-  const rawDate = member.card?.issuedAt || new Date();
-  const issueDate = rawDate instanceof Date ? rawDate : new Date(rawDate);
-  let issueDateStr;
-  try {
-    issueDateStr = format(issueDate, 'dd/MM/yyyy');
-  } catch (e) {
-    issueDateStr = new Date().toLocaleDateString('en-GB');
-  }
-
-  // 4. Build the PDF
-  const doc = new PDFDocument({
-    size: [W, H],
-    margin: 0,
-    info: {
-      Title: `GymX Card — ${member.fullName}`,
-      Author: 'GymX Gym Management System',
-    },
-  });
-
-  // ═══════════════════════════════════════════════════════
-  // HEADER BAND (0 → 40pt)
-  // ═══════════════════════════════════════════════════════
-  doc.rect(0, 0, W, HEADER_H).fill(C.headerBg);
-
-  let headerTextX = 10;
-
-  // Logo (32×32, left-aligned in header)
-  if (logoBuffer) {
-    try {
-      doc.image(logoBuffer, 8, 4, { width: 32, height: 32 });
-      headerTextX = 44;
-    } catch (e) { /* skip logo on error */ }
-  }
-
-  // Gym name
-  const gymName = settings.gymName || 'GymX';
-  const nameFontSize = gymName.length > 18 ? 9 : 11;
-  doc.font('Helvetica-Bold').fontSize(nameFontSize).fillColor(C.headerText);
-  doc.text(gymName, headerTextX, logoBuffer ? 8 : 10, {
-    width: W - headerTextX - 8,
-  });
-
-  // Tagline / address (small, under gym name)
-  const subtitle = settings.tagline || settings.address || '';
-  if (subtitle) {
-    doc.font('Helvetica').fontSize(6).fillColor('#8ab4d8');
-    doc.text(subtitle, headerTextX, logoBuffer ? 22 : 24, {
-      width: W - headerTextX - 8,
-      lineBreak: false,
+    // 1. Generate QR code
+    const qrBuffer = await QRCode.toBuffer(member.memberId, {
+      type: 'png',
+      width: 300,
+      margin: 1,
+      color: { dark: '#1a1133', light: '#ffffff' },
+      errorCorrectionLevel: 'H',
     });
-  }
 
-  // ═══════════════════════════════════════════════════════
-  // BODY (40pt → 125pt)
-  // ═══════════════════════════════════════════════════════
-  const bodyY = HEADER_H;
-  const bodyPad = 10;
-  const leftColW = W - 80 - bodyPad * 2 - 10; // left column width
-  const qrSize = 80;
-  const qrX = W - qrSize - bodyPad;
-  const qrY = bodyY + (BODY_H - qrSize) / 2;
+    // 2. Fetch photo (logo handled separately since SVG won't work in PDFKit)
+    const photoBuffer = member.photoUrl ? await fetchImageBuffer(member.photoUrl) : null;
 
-  // ─── Left column: photo, name, ID ────────────────────
-  let ly = bodyY + 8;
-
-  // Member photo or initials placeholder
-  const photoSize = 45;
-  const photoX = bodyPad;
-  const photoCenterX = photoX + photoSize / 2;
-  const photoCenterY = ly + photoSize / 2;
-
-  if (photoBuffer) {
-    // Circle-clip the photo
-    doc.save();
-    doc.circle(photoCenterX, photoCenterY, photoSize / 2).clip();
+    // 3. Issue date
+    const rawDate = member.card?.issuedAt || new Date();
+    const issueDate = rawDate instanceof Date ? rawDate : new Date(rawDate);
+    let issueDateStr;
     try {
-      doc.image(photoBuffer, photoX, ly, { width: photoSize, height: photoSize });
+      issueDateStr = format(issueDate, 'dd/MM/yyyy');
     } catch (e) {
-      // Fallback to initials on image error
-      doc.circle(photoCenterX, photoCenterY, photoSize / 2).fill(C.placeholderBg);
-      doc.font('Helvetica-Bold').fontSize(16).fillColor('#ffffff');
-      doc.text(getInitials(member.fullName), photoX, ly + 13, { width: photoSize, align: 'center' });
+      issueDateStr = new Date().toLocaleDateString('en-GB');
     }
-    doc.restore();
-  } else {
-    // Gray circle with initials
-    doc.circle(photoCenterX, photoCenterY, photoSize / 2).fill(C.placeholderBg);
-    doc.font('Helvetica-Bold').fontSize(16).fillColor('#ffffff');
-    doc.text(getInitials(member.fullName), photoX, ly + 13, { width: photoSize, align: 'center' });
-  }
 
-  // Member name (to the right of photo)
-  const nameX = photoX + photoSize + 6;
-  const nameW = leftColW - photoSize - 6;
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.bodyText);
-  doc.text(member.fullName, nameX, ly + 6, { width: nameW, lineBreak: true });
+    // 4. Build PDF
+    const doc = new PDFDocument({
+      size: [W, H],
+      margin: 0,
+      info: {
+        Title: `GymX Card — ${member.fullName}`,
+        Author: 'GymX Gym Management System',
+      },
+    });
 
-  // Member ID (monospace, gray)
-  doc.font('Courier').fontSize(7.5).fillColor(C.bodySecondary);
-  doc.text(member.memberId, nameX, ly + 28, { width: nameW });
+    // ═══════════════════════════════════════════════════════
+    // BACKGROUND — subtle gradient feel
+    // ═══════════════════════════════════════════════════════
+    doc.rect(0, 0, W, H).fill('#ffffff');
 
-  // ─── Right column: QR code ───────────────────────────
-  doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
+    // ═══════════════════════════════════════════════════════
+    // LEFT ACCENT BAR (8pt wide, full height)
+    // ═══════════════════════════════════════════════════════
+    doc.rect(0, 0, 8, H).fill(C.accent);
 
-  // ═══════════════════════════════════════════════════════
-  // FOOTER BAND (125pt → 153pt)
-  // ═══════════════════════════════════════════════════════
-  const footerY = H - FOOTER_H;
-  doc.rect(0, footerY, W, FOOTER_H).fill(C.footerBg);
+    // ═══════════════════════════════════════════════════════
+    // HEADER BAND (top 42pt)
+    // ═══════════════════════════════════════════════════════
+    const headerH = 42;
+    doc.rect(8, 0, W - 8, headerH).fill(C.headerBg);
 
-  // Left: scan instruction
-  doc.font('Helvetica-Oblique').fontSize(7).fillColor(C.footerText);
-  doc.text('Scan QR code at entrance', bodyPad, footerY + 10, { width: W / 2 });
+    // Gym name (left-aligned, bold)
+    const gymName = settings.gymName || 'GymX';
+    const nameSize = gymName.length > 18 ? 10 : 13;
+    doc.font('Helvetica-Bold').fontSize(nameSize).fillColor(C.white);
+    doc.text(gymName, 16, 10, { width: W - 100 });
 
-  // Right: issue date
-  doc.font('Helvetica').fontSize(7).fillColor(C.footerText);
-  doc.text(`Issued: ${issueDateStr}`, W / 2, footerY + 10, {
-    width: W / 2 - bodyPad,
-    align: 'right',
-  });
+    // Tagline
+    const tagline = settings.tagline || '';
+    if (tagline) {
+      doc.font('Helvetica').fontSize(6.5).fillColor(C.accentLight);
+      doc.text(tagline, 16, 26, { width: W - 100, lineBreak: false });
+    }
 
-  // 5. Return PDF as Buffer
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
-    doc.end();
-  });
+    // "MEMBER" label (right side of header)
+    doc.font('Helvetica-Bold').fontSize(7).fillColor(C.accentLight);
+    doc.text('MEMBER', W - 60, 16, { width: 52, align: 'right' });
+
+    // ═══════════════════════════════════════════════════════
+    // BODY (42pt → 125pt)
+    // ═══════════════════════════════════════════════════════
+    const bodyY = headerH + 6;
+
+    // ─── Left: Photo + Info ──────────────────────────────
+    const photoSize = 52;
+    const photoX = 16;
+    const photoY = bodyY + 2;
+    const photoCX = photoX + photoSize / 2;
+    const photoCY = photoY + photoSize / 2;
+
+    if (photoBuffer) {
+      doc.save();
+      doc.circle(photoCX, photoCY, photoSize / 2).clip();
+      try {
+        doc.image(photoBuffer, photoX, photoY, { width: photoSize, height: photoSize });
+      } catch (e) {
+        doc.circle(photoCX, photoCY, photoSize / 2).fill(C.placeholderBg);
+        doc.font('Helvetica-Bold').fontSize(18).fillColor(C.white);
+        doc.text(getInitials(member.fullName), photoX, photoY + 15, { width: photoSize, align: 'center' });
+      }
+      doc.restore();
+    } else {
+      // Purple circle with initials
+      doc.circle(photoCX, photoCY, photoSize / 2).fill(C.placeholderBg);
+      doc.font('Helvetica-Bold').fontSize(18).fillColor(C.white);
+      doc.text(getInitials(member.fullName), photoX, photoY + 15, { width: photoSize, align: 'center' });
+    }
+
+    // Thin circle border around photo
+    doc.circle(photoCX, photoCY, photoSize / 2 + 1).lineWidth(0.5).stroke(C.accent);
+
+    // Member name (right of photo)
+    const infoX = photoX + photoSize + 8;
+    const infoW = W - infoX - 90;
+
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(C.bodyText);
+    doc.text(member.fullName, infoX, bodyY + 6, { width: infoW, lineBreak: true });
+
+    // Member ID
+    doc.font('Courier').fontSize(7).fillColor(C.accent);
+    doc.text(member.memberId, infoX, bodyY + 30, { width: infoW });
+
+    // Issue date
+    doc.font('Helvetica').fontSize(6).fillColor(C.bodySecondary);
+    doc.text(`Issued: ${issueDateStr}`, infoX, bodyY + 42, { width: infoW });
+
+    // ─── Right: QR code ──────────────────────────────────
+    const qrSize = 68;
+    const qrX = W - qrSize - 12;
+    const qrY = bodyY;
+
+    // QR background (white rounded rect)
+    doc.roundedRect(qrX - 3, qrY - 3, qrSize + 6, qrSize + 6, 4).fill('#ffffff');
+    doc.roundedRect(qrX - 3, qrY - 3, qrSize + 6, qrSize + 6, 4).lineWidth(0.5).stroke('#e5e7eb');
+    doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
+
+    // "SCAN" label under QR
+    doc.font('Helvetica-Bold').fontSize(5).fillColor(C.bodySecondary);
+    doc.text('SCAN TO CHECK IN', qrX - 3, qrY + qrSize + 5, { width: qrSize + 6, align: 'center' });
+
+    // ═══════════════════════════════════════════════════════
+    // FOOTER (bottom 25pt)
+    // ═══════════════════════════════════════════════════════
+    const footerH = 22;
+    const footerY = H - footerH;
+
+    doc.rect(8, footerY, W - 8, footerH).fill(C.footerBg);
+
+    // Divider line
+    doc.moveTo(16, footerY).lineTo(W - 12, footerY).lineWidth(0.5).stroke('#e5e7eb');
+
+    // Contact info
+    const contactParts = [];
+    if (settings.phone) contactParts.push(`☎ ${settings.phone}`);
+    if (settings.address) contactParts.push(settings.address);
+    const contactStr = contactParts.join('  •  ') || 'Scan QR code at gym entrance';
+
+    doc.font('Helvetica').fontSize(5.5).fillColor(C.footerText);
+    doc.text(contactStr, 16, footerY + 7, { width: W - 28, align: 'center' });
+
+    // 5. Return PDF as Buffer
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+      doc.end();
+    });
 
   } catch (err) {
     const error = new Error(`Card generation failed for ${member?.memberId || 'unknown'}: ${err.message}`);

@@ -58,9 +58,70 @@ function GeneralSettings() {
 
   const update = (field, value) => setSettings(prev => ({ ...prev, [field]: value }));
 
+  const compressLogo = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const size = 300;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          const scale = Math.min(size / img.width, size / img.height);
+          const w = img.width * scale;
+          const h = img.height * scale;
+          ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+          resolve(canvas.toDataURL('image/png', 0.9));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const compressed = await compressLogo(file);
+    update('logoUrl', compressed);
+  };
+
   return (
     <div style={{ maxWidth: '700px' }}>
       <h3 style={{ marginBottom: '1.25rem' }}>Gym Identity</h3>
+
+      {/* Logo Upload */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem', padding: '1rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+        <div style={{
+          width: '72px', height: '72px', borderRadius: 'var(--radius-md)', overflow: 'hidden',
+          border: '2px solid var(--border)', background: 'var(--bg-card)', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {settings.logoUrl ? (
+            <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-muted)' }}>GX</span>
+          )}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.375rem' }}>Gym Logo</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+            Appears on membership cards, receipts, and login page. PNG/JPG, max 300×300.
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+              <Upload size={14} /> Change Logo
+              <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} />
+            </label>
+            <button className="btn btn-ghost btn-sm" onClick={() => update('logoUrl', null)} style={{ fontSize: '0.75rem' }}>
+              Reset Default
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
         <div className="form-group"><label className="form-label">Gym Name</label><input className="form-input" value={settings.gymName || ''} onChange={(e) => update('gymName', e.target.value)} /></div>
         <div className="form-group"><label className="form-label">Tagline</label><input className="form-input" value={settings.tagline || ''} onChange={(e) => update('tagline', e.target.value)} /></div>

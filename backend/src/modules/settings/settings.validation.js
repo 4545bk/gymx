@@ -6,6 +6,7 @@ const { z } = require('zod');
 const updateSettingsSchema = z.object({
   gymName: z.string().min(1).max(120).optional(),
   tagline: z.string().max(200).optional(),
+  logoUrl: z.string().optional().nullable(),
   phone: z.string().max(30).optional(),
   email: z.string().max(120).optional(),
   address: z.string().max(300).optional(),

@@ -72,7 +72,9 @@ export default function MembersPage() {
   const viewQR = async (memberId) => {
     try {
       const { data } = await api.get(`/members/${memberId}/qr`);
-      setShowQR(data.data);
+      // Find member name from the list
+      const member = members.find(m => m.memberId === memberId);
+      setShowQR({ ...data.data, fullName: member?.fullName || '' });
     } catch (err) {
       console.error('QR fetch error:', err);
     }
@@ -430,22 +432,55 @@ export default function MembersPage() {
               <h2>QR Code</h2>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowQR(null)}>✕</button>
             </div>
-            <div style={{ padding: '1rem', background: 'white', borderRadius: 'var(--radius-md)', display: 'inline-block' }}>
+            <div style={{ padding: '1.25rem', background: 'white', borderRadius: 'var(--radius-md)', display: 'inline-block' }}>
               {showQR.qrCodeBase64 && (
-                <img src={showQR.qrCodeBase64} alt="QR Code" style={{ width: '250px', height: '250px' }} />
+                <img id="qr-image" src={showQR.qrCodeBase64} alt="QR Code" style={{ width: '250px', height: '250px' }} />
               )}
             </div>
-            <p style={{ marginTop: '1rem', fontFamily: 'monospace', color: 'var(--text-accent)' }}>
+            <p style={{ marginTop: '0.75rem', fontFamily: 'monospace', color: 'var(--text-accent)', fontWeight: 700, fontSize: '1.1rem' }}>
               {showQR.memberId}
             </p>
-            <div className="modal-footer" style={{ justifyContent: 'center' }}>
+            {showQR.fullName && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem' }}>{showQR.fullName}</p>
+            )}
+            <div className="modal-footer" style={{ justifyContent: 'center', gap: '0.5rem' }}>
+              {/* Download QR as PNG */}
               <button className="btn btn-primary" onClick={() => {
+                const canvas = document.createElement('canvas');
+                const size = 400;
+                canvas.width = size;
+                canvas.height = size + 60;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                const img = document.getElementById('qr-image');
+                if (img) {
+                  ctx.drawImage(img, 50, 20, 300, 300);
+                }
+                ctx.fillStyle = '#1a1133';
+                ctx.font = 'bold 18px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(showQR.memberId, size / 2, size + 10);
+                if (showQR.fullName) {
+                  ctx.font = '14px sans-serif';
+                  ctx.fillStyle = '#6B7280';
+                  ctx.fillText(showQR.fullName, size / 2, size + 35);
+                }
+                const link = document.createElement('a');
+                link.download = `GymX-QR-${showQR.memberId}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+              }}>
+                Download QR
+              </button>
+              {/* Print QR */}
+              <button className="btn btn-secondary" onClick={() => {
                 const printWindow = window.open('', '_blank');
-                printWindow.document.write(`<html><body style="display:flex;align-items:center;justify-content:center;min-height:100vh"><div style="text-align:center"><img src="${showQR.qrCodeBase64}" width="300"/><p style="font-family:monospace;font-size:1.5rem;margin-top:1rem">${showQR.memberId}</p></div></body></html>`);
+                printWindow.document.write(`<html><body style="display:flex;align-items:center;justify-content:center;min-height:100vh"><div style="text-align:center"><img src="${showQR.qrCodeBase64}" width="300"/><p style="font-family:monospace;font-size:1.5rem;margin-top:1rem">${showQR.memberId}</p>${showQR.fullName ? `<p style="font-size:1.1rem;color:#6B7280">${showQR.fullName}</p>` : ''}</div></body></html>`);
                 printWindow.document.close();
                 printWindow.print();
               }}>
-                Print QR Code
+                Print QR
               </button>
             </div>
           </div>
@@ -588,21 +623,29 @@ function AddMemberModal({ onClose, onSuccess }) {
                 cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-secondary)',
               }}>
                 {photoPreview ? 'Change' : 'Upload Photo'}
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
+                  // No file size limit — compression handles everything
                   const canvas = document.createElement('canvas');
                   const ctx = canvas.getContext('2d');
                   const img = new Image();
                   img.onload = () => {
-                    const size = 200;
+                    const size = 300; // Larger for better card print quality
                     canvas.width = size;
                     canvas.height = size;
+                    ctx.fillStyle = '#1a1f35'; // Dark background fill
+                    ctx.fillRect(0, 0, size, size);
                     const scale = Math.max(size / img.width, size / img.height);
                     const x = (size - img.width * scale) / 2;
                     const y = (size - img.height * scale) / 2;
                     ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-                    setPhotoPreview(canvas.toDataURL('image/jpeg', 0.8));
+                    setPhotoPreview(canvas.toDataURL('image/jpeg', 0.75));
+                    URL.revokeObjectURL(img.src);
+                  };
+                  img.onerror = () => {
+                    setError('Could not load image. Try a different photo.');
+                    URL.revokeObjectURL(img.src);
                   };
                   img.src = URL.createObjectURL(file);
                 }} />

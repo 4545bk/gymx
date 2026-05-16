@@ -38,6 +38,18 @@ const start = async () => {
     console.log(`   Health:      http://localhost:${PORT}/health`);
     console.log(`   LAN:         http://0.0.0.0:${PORT}/api/v1`);
     console.log('──────────────────────────────────────────────────');
+
+    // ─── Keep-Alive Ping (prevents Render free tier sleep) ──
+    if (NODE_ENV === 'production') {
+      const { NEXT_PUBLIC_API_URL } = require('./config/env');
+      const healthUrl = NEXT_PUBLIC_API_URL.replace(/\/api\/v1$/, '') + '/health';
+      const ping = () => {
+        require('http').get(healthUrl.replace('https://', 'http://'), () => {}).on('error', () => {});
+        require('https').get(healthUrl, () => {}).on('error', () => {});
+      };
+      setInterval(ping, 14 * 60 * 1000); // Every 14 minutes
+      console.log(`🏓 Keep-alive ping active (every 14min → ${healthUrl})`);
+    }
   });
 };
 
