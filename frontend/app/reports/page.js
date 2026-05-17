@@ -7,7 +7,7 @@ import { BarChart3, Users, TrendingUp, CalendarCheck, AlertTriangle, UserCheck, 
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const TABS = ['Overview', 'Revenue', 'Retention', 'Staff'];
-const CHART_COLORS = ['#a78bfa', '#e7c365', '#22c55e', '#2dd4bf', '#ef4444', '#f59e0b'];
+const CHART_COLORS = ['#10b981', '#3b82f6', '#22c55e', '#06b6d4', '#ef4444', '#f59e0b'];
 
 export default function ReportsPage() {
   const { staff } = useAuth();
@@ -61,7 +61,7 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {loading ? <div className="loading-page" style={{ minHeight: '40vh' }}><div className="spinner spinner-lg"></div></div> : (
+      {loading ? <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}><div className="skeleton" style={{ height: '48px', borderRadius: 'var(--radius-md)' }} /><div className="stats-grid">{[...Array(4)].map((_, i) => <div key={i} className="skeleton skeleton-card" />)}</div><div className="skeleton" style={{ height: '300px', borderRadius: 'var(--radius-lg)' }} /></div> : (
         <>
           {/* ─── OVERVIEW TAB ─── */}
           {tab === 'Overview' && (
@@ -121,8 +121,8 @@ export default function ReportsPage() {
                         <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                         <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={v => `${(v/100).toLocaleString()}`} />
                         <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} formatter={v => formatCurrency(v)} />
-                        <Line type="monotone" dataKey="membership" stroke="#a78bfa" strokeWidth={2} dot={{ fill: '#a78bfa' }} name="Membership" />
-                        <Line type="monotone" dataKey="product" stroke="#e7c365" strokeWidth={2} dot={{ fill: '#e7c365' }} name="Products" />
+                        <Line type="monotone" dataKey="membership" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981' }} name="Membership" />
+                        <Line type="monotone" dataKey="product" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6' }} name="Products" />
                         <Legend />
                       </LineChart>
                     </ResponsiveContainer>

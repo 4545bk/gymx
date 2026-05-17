@@ -43,7 +43,7 @@ export default function AlertsPage() {
   const getAlertStyle = (type, severity) => {
     if (type?.includes('expir')) return { borderColor: '#f59e0b', icon: <Clock size={18} style={{ color: '#f59e0b' }} />, colorClass: 'alert-warning' };
     if (type?.includes('maintenance')) return { borderColor: '#3b82f6', icon: <Wrench size={18} style={{ color: '#3b82f6' }} />, colorClass: 'alert-info' };
-    if (type?.includes('payment') || type?.includes('due')) return { borderColor: '#e7c365', icon: <DollarSign size={18} style={{ color: '#e7c365' }} />, colorClass: 'alert-warning' };
+    if (type?.includes('payment') || type?.includes('due')) return { borderColor: '#f59e0b', icon: <DollarSign size={18} style={{ color: '#f59e0b' }} />, colorClass: 'alert-warning' };
     if (type?.includes('renew')) return { borderColor: '#22c55e', icon: <CheckCircle size={18} style={{ color: '#22c55e' }} />, colorClass: 'alert-success' };
     if (severity === 'critical') return { borderColor: '#ef4444', icon: <AlertCircle size={18} style={{ color: '#ef4444' }} />, colorClass: 'alert-danger' };
     if (severity === 'warning') return { borderColor: '#f59e0b', icon: <AlertTriangle size={18} style={{ color: '#f59e0b' }} />, colorClass: 'alert-warning' };
@@ -86,7 +86,7 @@ export default function AlertsPage() {
         ))}
       </div>
 
-      {loading ? <div className="loading-page" style={{ minHeight: '40vh' }}><div className="spinner spinner-lg"></div></div> : (
+      {loading ? <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>{[...Array(5)].map((_, i) => <div key={i} className="skeleton" style={{ height: '72px', borderRadius: 'var(--radius-md)' }} />)}</div> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {alerts.length > 0 ? alerts.map((a) => {
             const style = getAlertStyle(a.type, a.severity);

@@ -6,12 +6,12 @@ import api from '@/lib/api';
 import { Plus, UserCog, Shield, Mail, Phone, Clock } from 'lucide-react';
 
 const ROLE_STYLES = {
-  owner: { bg: 'rgba(167,139,250,0.15)', color: '#a78bfa', label: 'Owner', icon: Shield },
+  owner: { bg: 'rgba(16,185,129,0.15)', color: '#10b981', label: 'Owner', icon: Shield },
   receptionist: { bg: 'rgba(45,212,191,0.15)', color: '#2dd4bf', label: 'Receptionist', icon: UserCog },
-  trainer: { bg: 'rgba(231,195,101,0.15)', color: '#e7c365', label: 'Trainer', icon: UserCog },
+  trainer: { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6', label: 'Trainer', icon: UserCog },
 };
 
-const AVATAR_COLORS = ['#a78bfa', '#2dd4bf', '#e7c365', '#f59e0b', '#22c55e', '#ef4444'];
+const AVATAR_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#06b6d4', '#22c55e', '#ef4444'];
 
 export default function StaffPage() {
   const [staffList, setStaffList] = useState([]);
@@ -42,7 +42,7 @@ export default function StaffPage() {
       </p>
 
       {loading ? (
-        <div className="loading-page" style={{ minHeight: '40vh' }}><div className="spinner spinner-lg"></div></div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>{[...Array(4)].map((_, i) => <div key={i} className="skeleton-row"><div className="skeleton skeleton-avatar" /><div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}><div className="skeleton skeleton-text" style={{ width: '35%' }} /><div className="skeleton skeleton-text" style={{ width: '55%' }} /></div></div>)}</div>
       ) : (
         staffList.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1rem' }}>

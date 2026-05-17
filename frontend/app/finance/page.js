@@ -57,8 +57,8 @@ export default function FinancePage() {
     const map = {
       cash: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e', label: 'Cash' },
       'bank-transfer': { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6', label: 'Bank' },
-      telebirr: { bg: 'rgba(167,139,250,0.12)', color: '#a78bfa', label: 'Telebirr' },
-      cbe: { bg: 'rgba(231,195,101,0.12)', color: '#e7c365', label: 'CBE' },
+      telebirr: { bg: 'rgba(16,185,129,0.12)', color: '#10b981', label: 'Telebirr' },
+      cbe: { bg: 'rgba(59,130,246,0.12)', color: '#3b82f6', label: 'CBE' },
     };
     return map[method] || { bg: 'var(--bg-elevated)', color: 'var(--text-secondary)', label: method || 'Other' };
   };
@@ -125,7 +125,7 @@ export default function FinancePage() {
           </div>
         </div>
 
-        {loading ? <div className="loading-page" style={{ minHeight: '30vh' }}><div className="spinner spinner-lg"></div></div> : (
+        {loading ? <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}><div className="stats-grid">{[...Array(3)].map((_, i) => <div key={i} className="skeleton skeleton-card" />)}</div><div className="skeleton" style={{ height: '400px', borderRadius: 'var(--radius-lg)' }} /></div> : (
           <>
             <table>
               <thead><tr>

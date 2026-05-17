@@ -66,7 +66,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Table */}
-      {loading ? <div className="loading-page" style={{ minHeight: '40vh' }}><div className="spinner spinner-lg"></div></div> : (
+      {loading ? <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}><div className="skeleton" style={{ height: '48px', borderRadius: 'var(--radius-md)' }} />{[...Array(4)].map((_, i) => <div key={i} className="skeleton" style={{ height: '56px', borderRadius: 'var(--radius-sm)' }} />)}</div> : (
         <div className="table-wrapper">
           <table>
             <thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>

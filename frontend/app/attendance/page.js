@@ -131,7 +131,7 @@ export default function AttendancePage() {
         </div>
 
         {loading ? (
-          <div className="loading-page" style={{ minHeight: '30vh' }}><div className="spinner spinner-lg"></div></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}><div className="stats-grid">{[...Array(4)].map((_, i) => <div key={i} className="skeleton skeleton-card" />)}</div><div className="skeleton" style={{ height: '300px', borderRadius: 'var(--radius-lg)' }} /></div>
         ) : (
           <>
             <table>

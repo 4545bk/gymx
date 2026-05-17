@@ -433,7 +433,7 @@ export default function MobileScannerPage() {
               }}>
                 <div style={{
                   width: '70px', height: '70px', borderRadius: '50%',
-                  background: 'rgba(167,139,250,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <Camera size={36} style={{ color: 'var(--accent-primary)' }} />
                 </div>

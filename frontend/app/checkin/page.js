@@ -261,7 +261,7 @@ export default function CheckinPage() {
           ? 'radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%)'
           : result?.result === 'denied'
             ? 'radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 70%)',
+            : 'radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%)',
         transition: 'background 500ms ease',
         pointerEvents: 'none',
       }} />

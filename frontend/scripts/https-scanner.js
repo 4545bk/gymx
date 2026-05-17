@@ -132,21 +132,20 @@ function getScannerHTML(apiBase) {
     padding: 1rem; text-align: center; border-bottom: 1px solid #2d2d4a;
     background: #111128;
   }
-  .header h1 { font-size: 1.3rem; background: linear-gradient(135deg, #a78bfa, #c084fc);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header h1 { font-size: 1.3rem; color: #10b981; font-weight: 800; }
   .stats { font-size: 0.75rem; color: #888; margin-top: 0.25rem; }
   .stats .ok { color: #22c55e; } .stats .no { color: #ef4444; }
   .content { flex: 1; display: flex; flex-direction: column; align-items: center;
     padding: 1rem; gap: 1rem; }
   .camera-box { width: 100%; max-width: 400px; position: relative; border-radius: 16px;
-    overflow: hidden; border: 2px solid #a78bfa; background: #000; }
+    overflow: hidden; border: 2px solid #10b981; background: #000; }
   .camera-box video { width: 100%; display: block; }
   .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center;
     justify-content: center; pointer-events: none; }
   .scan-frame { width: 200px; height: 200px; position: relative; }
-  .scan-line { position: absolute; left: 5%; right: 5%; height: 3px; background: #a78bfa;
-    box-shadow: 0 0 12px #a78bfa; animation: scanLine 2s ease-in-out infinite; }
-  .corner { position: absolute; width: 25px; height: 25px; border-color: #a78bfa;
+  .scan-line { position: absolute; left: 5%; right: 5%; height: 3px; background: #10b981;
+    box-shadow: 0 0 12px #10b981; animation: scanLine 2s ease-in-out infinite; }
+  .corner { position: absolute; width: 25px; height: 25px; border-color: #10b981;
     border-style: solid; }
   .corner.tl { top:0;left:0; border-width: 4px 0 0 4px; }
   .corner.tr { top:0;right:0; border-width: 4px 4px 0 0; }
@@ -174,9 +173,9 @@ function getScannerHTML(apiBase) {
   .manual input { flex: 1; padding: 0.875rem; background: #111128;
     border: 2px solid #2d2d4a; border-radius: 10px; color: #e2e8f0;
     font-family: monospace; font-size: 1rem; outline: none; }
-  .manual input:focus { border-color: #a78bfa; }
+  .manual input:focus { border-color: #10b981; }
   .manual button { padding: 0.875rem 1.25rem;
-    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    background: linear-gradient(135deg, #059669, #10b981);
     color: white; border: none; border-radius: 10px; font-weight: 700;
     font-size: 0.9rem; cursor: pointer; }
   .manual button:disabled { opacity: 0.4; }

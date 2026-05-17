@@ -6,7 +6,7 @@ export const metadata = {
   title: 'GymX — Gym Management System',
   description: 'Professional QR-enabled gym management platform with real-time check-in, member management, and business analytics.',
   manifest: '/manifest.json',
-  themeColor: '#7c3aed',
+  themeColor: '#10b981',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -25,7 +25,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#7c3aed" />
+        <meta name="theme-color" content="#10b981" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="GymX" />

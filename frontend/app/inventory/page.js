@@ -77,7 +77,7 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {loading ? <div className="loading-page" style={{ minHeight: '40vh' }}><div className="spinner spinner-lg"></div></div> : (
+      {loading ? <div className="stats-grid">{[...Array(6)].map((_, i) => <div key={i} className="skeleton" style={{ height: '180px', borderRadius: 'var(--radius-lg)' }} />)}</div> : (
         filtered.length > 0 ? (
           <div className="equipment-grid">
             {filtered.map((item) => {

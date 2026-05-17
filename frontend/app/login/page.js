@@ -38,18 +38,18 @@ export default function LoginPage() {
       {/* Decorative blurs */}
       <div style={{
         position: 'absolute', top: '-10%', left: '-10%', width: '50%', height: '50%',
-        borderRadius: '50%', background: 'rgba(167, 139, 250, 0.08)', filter: 'blur(120px)', pointerEvents: 'none',
+        borderRadius: '50%', background: 'rgba(16, 185, 129, 0.06)', filter: 'blur(120px)', pointerEvents: 'none',
       }} />
       <div style={{
         position: 'absolute', bottom: '-10%', right: '-10%', width: '50%', height: '50%',
-        borderRadius: '50%', background: 'rgba(231, 195, 101, 0.06)', filter: 'blur(120px)', pointerEvents: 'none',
+        borderRadius: '50%', background: 'rgba(16, 185, 129, 0.04)', filter: 'blur(120px)', pointerEvents: 'none',
       }} />
 
-      {/* Background gym image */}
+      {/* Background pattern */}
       <div style={{
-        position: 'absolute', inset: 0, zIndex: 0, opacity: 0.15,
-        backgroundImage: 'url("https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1920&q=80")',
-        backgroundSize: 'cover', backgroundPosition: 'center', filter: 'grayscale(100%)',
+        position: 'absolute', inset: 0, zIndex: 0, opacity: 0.03,
+        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)',
+        backgroundSize: '40px 40px',
       }} />
 
       <main style={{ width: '100%', maxWidth: '420px', padding: '0 1rem', zIndex: 10, animation: 'modalIn 400ms var(--ease-out, cubic-bezier(0.23,1,0.32,1))' }}>
@@ -60,7 +60,7 @@ export default function LoginPage() {
             <div style={{
               width: 64, height: 64, borderRadius: 'var(--radius-lg)',
               background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: '1rem', boxShadow: '0 0 20px rgba(207,188,255,0.2)',
+              marginBottom: '1rem', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.15)',
             }}>
               <Dumbbell size={32} color="white" style={{ transform: 'rotate(-45deg)' }} />
             </div>
@@ -153,7 +153,7 @@ export default function LoginPage() {
                 width: '100%', padding: '1rem', borderRadius: 'var(--radius-lg)',
                 background: 'var(--accent-gradient)', color: '#1a1f35', fontWeight: 700,
                 fontSize: '1.1rem', border: 'none', cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(207,188,255,0.2)',
+                boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)',
                 transition: 'transform 160ms cubic-bezier(0.23,1,0.32,1), box-shadow 200ms ease, opacity 200ms ease', opacity: loading ? 0.7 : 1,
                 fontFamily: 'inherit',
               }}

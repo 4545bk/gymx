@@ -66,26 +66,38 @@ export default function DashboardPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const avatarColors = ['#a78bfa', '#2dd4bf', '#f59e0b', '#ef4444', '#22c55e', '#3b82f6', '#e7c365'];
+  const avatarColors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#22c55e', '#06b6d4', '#8b5cf6'];
   const getColor = (i) => avatarColors[i % avatarColors.length];
 
   return (
     <ProtectedLayout>
       {loading ? (
-        <div className="loading-page" style={{ minHeight: '60vh' }}>
-          <div className="spinner spinner-lg"></div>
+        <div style={{ padding: '0' }}>
+          {/* Skeleton: Welcome Banner */}
+          <div className="skeleton" style={{ height: '110px', borderRadius: 'var(--radius-xl)', marginBottom: '1.5rem' }} />
+          {/* Skeleton: Stat Cards */}
+          <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="skeleton skeleton-card" />
+            ))}
+          </div>
+          {/* Skeleton: Content Grid */}
+          <div className="grid-2" style={{ gridTemplateColumns: '1.8fr 1fr' }}>
+            <div className="skeleton" style={{ height: '320px', borderRadius: 'var(--radius-lg)' }} />
+            <div className="skeleton" style={{ height: '320px', borderRadius: 'var(--radius-lg)' }} />
+          </div>
         </div>
       ) : (
         <>
           {/* Welcome Banner */}
           <div style={{
-            background: 'linear-gradient(135deg, #2dd4bf, #06b6d4, #22d3ee)',
+            background: 'linear-gradient(135deg, #059669, #10b981, #34d399)',
             borderRadius: 'var(--radius-xl)', padding: '2rem 2.5rem',
             marginBottom: '1.5rem', position: 'relative', overflow: 'hidden',
           }}>
             <div style={{ position: 'relative', zIndex: 1 }}>
               <h2 style={{ color: '#0f172a', fontSize: '1.6rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                Welcome back, {staff?.fullName?.split(' ')[0]} 👋
+                Welcome back, {staff?.fullName?.split(' ')[0]}
               </h2>
               <p style={{ color: 'rgba(15,23,42,0.7)', fontSize: '0.95rem' }}>
                 Your facility is performing at 94% capacity today. You have {stats?.expiringIn7Days || 0} membership renewals pending attention.

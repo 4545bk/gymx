@@ -1,61 +1,61 @@
 /* ═══════════════════════════════════════════════════════════
-   GymX Design System — Global Styles
-   Premium dark theme with vibrant accent colors
+   GymX Design System — Taste Skill Rewrite
+   Premium dark theme · Emerald accent · Geist typography
    ═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&display=swap');
 
 /* ─── CSS Variables ────────────────────────────────────────── */
 :root {
-  /* Background layers */
-  --bg-primary: #0a0e1a;
-  --bg-secondary: #111827;
-  --bg-card: #1a1f35;
-  --bg-card-hover: #222842;
-  --bg-elevated: #252b45;
-  --bg-input: #141929;
+  /* Background layers — Zinc scale, no pure black */
+  --bg-primary: #09090b;
+  --bg-secondary: #0f0f12;
+  --bg-card: #18181b;
+  --bg-card-hover: #1f1f23;
+  --bg-elevated: #27272a;
+  --bg-input: #0f0f12;
 
-  /* Brand colors */
-  --accent-primary: #a78bfa;
-  --accent-primary-hover: #8b5cf6;
-  --accent-secondary: #e7c365;
-  --accent-gradient: linear-gradient(135deg, #cfbcff, #a78bfa);
-  --accent-glow: 0 0 20px rgba(167, 139, 250, 0.3);
-  --accent-teal: #2dd4bf;
-  --accent-teal-hover: #14b8a6;
+  /* Brand colors — Emerald accent, no purple */
+  --accent-primary: #10b981;
+  --accent-primary-hover: #059669;
+  --accent-secondary: #d4d4d8;
+  --accent-gradient: linear-gradient(135deg, #10b981, #059669);
+  --accent-glow: 0 0 20px rgba(16, 185, 129, 0.15);
+  --accent-teal: #10b981;
+  --accent-teal-hover: #059669;
 
   /* Status colors */
   --success: #22c55e;
-  --success-bg: rgba(34, 197, 94, 0.1);
+  --success-bg: rgba(34, 197, 94, 0.08);
   --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.1);
+  --warning-bg: rgba(245, 158, 11, 0.08);
   --danger: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.1);
-  --info: #a78bfa;
-  --info-bg: rgba(167, 139, 250, 0.1);
+  --danger-bg: rgba(239, 68, 68, 0.08);
+  --info: #3b82f6;
+  --info-bg: rgba(59, 130, 246, 0.08);
 
-  /* Text */
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --text-accent: #cfbcff;
+  /* Text — Slate scale */
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+  --text-accent: #10b981;
 
   /* Borders */
-  --border: #1e293b;
-  --border-hover: #334155;
-  --border-accent: rgba(167, 139, 250, 0.3);
+  --border: #27272a;
+  --border-hover: #3f3f46;
+  --border-accent: rgba(16, 185, 129, 0.25);
 
   /* Spacing */
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 30px rgba(167, 139, 250, 0.15);
+  /* Shadows — tinted, no neon glows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.08);
 
   /* Transitions — Emil Kowalski custom curves */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -84,7 +84,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
@@ -107,24 +107,21 @@ h3 { font-size: 1.25rem; font-weight: 600; }
 h4 { font-size: 1.1rem; font-weight: 600; }
 
 .text-gradient {
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-primary);
+  font-weight: 700;
 }
 .brand-gradient {
-  background: linear-gradient(to right, #cfbcff, #e7c365);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-primary);
+  font-weight: 800;
 }
 
 /* ─── Glass Card ──────────────────────────────────────────── */
 .glass-card {
-  background: rgba(26, 31, 53, 0.8);
+  background: rgba(24, 24, 27, 0.85);
   backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-xl);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* ─── Cards ────────────────────────────────────────────────── */
@@ -225,10 +222,10 @@ h4 { font-size: 1.1rem; font-weight: 600; }
 
 .btn-primary {
   background: var(--accent-gradient);
-  color: white;
-  box-shadow: var(--accent-glow);
+  color: #fafafa;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2);
 }
-.btn-primary:hover { box-shadow: 0 0 30px rgba(167, 139, 250, 0.5); }
+.btn-primary:hover { box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25); }
 
 .btn-teal {
   background: var(--accent-teal);
@@ -739,7 +736,7 @@ tr:last-child td { border-bottom: none; }
   align-items: center;
   justify-content: center;
   background: var(--accent-gradient);
-  color: white;
+  color: #fafafa;
   font-size: 0.75rem;
   font-weight: 700;
   flex-shrink: 0;
@@ -998,5 +995,55 @@ tr:last-child td { border-bottom: none; }
     transform: none;
     animation: none;
   }
+}
+
+/* ─── Skeleton Shimmer (Taste Skill Rule 5) ───────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-card) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-card) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-text {
+  height: 0.85rem;
+  width: 60%;
+  border-radius: 4px;
+}
+
+.skeleton-title {
+  height: 1.5rem;
+  width: 40%;
+  border-radius: 4px;
+}
+
+.skeleton-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-card {
+  height: 120px;
+  border-radius: var(--radius-lg);
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--border);
 }
 
