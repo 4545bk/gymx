@@ -155,7 +155,16 @@ export default function MobileScannerPage() {
       }
 
       const data = await res.json();
-      scanResult = data?.data || { result: 'denied', denyReason: 'error', message: 'Unexpected response from server' };
+
+      if (data.data) {
+        // Success response: { success: true, data: { result, member, ... } }
+        scanResult = data.data;
+      } else if (data.error) {
+        // Error response: { success: false, error: { code, message } }
+        scanResult = { result: 'denied', denyReason: 'error', message: data.error.message || 'Server error' };
+      } else {
+        scanResult = { result: 'denied', denyReason: 'error', message: 'Unexpected server response' };
+      }
     } catch (err) {
       console.error('[Scanner] Check-in error:', err.message);
       scanResult = { result: 'denied', denyReason: 'error', message: 'Network error — check WiFi' };
