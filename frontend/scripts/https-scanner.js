@@ -224,8 +224,9 @@ function getScannerHTML(apiBase) {
 <canvas id="cv" style="display:none"></canvas>
 <script>
 const API='${apiBase}', KEY='gymx-scanner-api-key-dev-only-change-in-prod';
-let str=null,sl=null,cd=false,oc=0,nc=0,det=null,native=false;
-if('BarcodeDetector' in window){native=true;det=new BarcodeDetector({formats:['qr_code']});}
+let str=null,sl=null,cd=false,oc=0,nc=0,det=null,native=false,nativeFails=0;
+if('BarcodeDetector' in window){try{det=new BarcodeDetector({formats:['qr_code']});native=true;}catch(e){}}
+(function(){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';s.onerror=function(){const s2=document.createElement('script');s2.src='https://unpkg.com/jsqr@1.4.0/dist/jsQR.min.js';document.head.appendChild(s2);};document.head.appendChild(s);})();
 function snd(t){try{const c=new(window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);g.gain.value=.1;if(t==='ok'){o.frequency.value=880;o.type='sine';}else{o.frequency.value=220;o.type='square';}g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.4);o.start();o.stop(c.currentTime+.4);}catch(e){}}
 async function doScan(mid){
   const id=(mid||'').trim().toUpperCase();
@@ -256,16 +257,17 @@ async function startCam(){
     document.getElementById('camArea').innerHTML='<div class="camera-box"><video id="vid" playsinline muted autoplay></video><div class="scan-overlay"><div class="scan-frame"><div class="scan-line"></div><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div></div></div><div class="controls"><button onclick="flipCam()">🔄 Flip</button><button class="stop" onclick="stopCam()">Stop</button></div></div>';
     const v=document.getElementById('vid');v.srcObject=str;await v.play();
     const cv=document.getElementById('cv'),cx=cv.getContext('2d',{willReadFrequently:true});
+    nativeFails=0;
     const scan=async()=>{
       if(!str||v.readyState!==v.HAVE_ENOUGH_DATA){sl=requestAnimationFrame(scan);return;}
       if(!cd){
-        if(native&&det){try{const c=await det.detect(v);if(c.length>0&&c[0].rawValue)doScan(c[0].rawValue);}catch(e){}}
-        else if(window.jsQR){cv.width=v.videoWidth;cv.height=v.videoHeight;cx.drawImage(v,0,0);const img=cx.getImageData(0,0,cv.width,cv.height);const c=window.jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});if(c&&c.data)doScan(c.data);}
+        let found=false;
+        if(native&&det&&nativeFails<150){try{const c=await det.detect(v);if(c.length>0&&c[0].rawValue){found=true;nativeFails=0;doScan(c[0].rawValue);}else{nativeFails++;}}catch(e){native=false;}}
+        if(!found&&window.jsQR){cv.width=v.videoWidth;cv.height=v.videoHeight;cx.drawImage(v,0,0);const img=cx.getImageData(0,0,cv.width,cv.height);const c=window.jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});if(c&&c.data)doScan(c.data);}
       }
       sl=requestAnimationFrame(scan);
     };
     sl=requestAnimationFrame(scan);
-    if(!native&&!window.jsQR){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';document.head.appendChild(s);}
   }catch(e){alert('Camera error: '+e.message+'\\n\\nMake sure you allowed camera permission.');}
 }
 function stopCam(){if(sl)cancelAnimationFrame(sl);if(str)str.getTracks().forEach(t=>t.stop());str=null;document.getElementById('camArea').innerHTML='<button class="cam-btn" onclick="startCam()"><div style="font-size:3rem">📷</div><div style="font-weight:700;font-size:1.05rem;margin-top:.5rem">Tap to Start Scanner</div></button>';}

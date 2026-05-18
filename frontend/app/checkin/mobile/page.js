@@ -31,6 +31,9 @@ export default function MobileScannerPage() {
   const cooldownRef = useRef(false);
   const timeoutRef = useRef(null);
   const jsQRRef = useRef(null);
+  const nativeDetectorRef = useRef(null);
+  const nativeFailCountRef = useRef(0);
+  const useNativeRef = useRef(false);
 
   // ─── API URL: auto-detect for both local dev and production ──
   const API_BASE = typeof window !== 'undefined'
@@ -41,7 +44,7 @@ export default function MobileScannerPage() {
     : '/api/v1';
   const SCANNER_KEY = 'gymx-scanner-api-key-dev-only-change-in-prod';
 
-  // Load jsQR library from CDN
+  // Load jsQR library from CDN — ALWAYS load as primary/fallback scanner engine
   useEffect(() => {
     const cdnUrls = [
       'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js',
@@ -49,13 +52,31 @@ export default function MobileScannerPage() {
       'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js',
     ];
 
+    // Check if BarcodeDetector is available (but don't rely on it solely)
+    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+      try {
+        nativeDetectorRef.current = new BarcodeDetector({ formats: ['qr_code'] });
+        useNativeRef.current = true;
+        console.log('[Scanner] BarcodeDetector available — will verify it works');
+      } catch (e) {
+        console.log('[Scanner] BarcodeDetector constructor failed, using jsQR only');
+      }
+    }
+
     let loaded = false;
 
     const tryLoad = (index) => {
       if (index >= cdnUrls.length || loaded) {
         if (!loaded) {
-          setLoadingLib(false);
-          setError('Could not load QR scanner library. Check internet and refresh.');
+          // jsQR failed to load — if we have native detector, still allow scanning
+          if (useNativeRef.current) {
+            console.log('[Scanner] jsQR CDN failed but BarcodeDetector available');
+            setLibLoaded(true);
+            setLoadingLib(false);
+          } else {
+            setLoadingLib(false);
+            setError('Could not load QR scanner library. Check internet and refresh.');
+          }
         }
         return;
       }
@@ -69,6 +90,7 @@ export default function MobileScannerPage() {
           jsQRRef.current = window.jsQR;
           setLibLoaded(true);
           setLoadingLib(false);
+          console.log('[Scanner] jsQR loaded from', cdnUrls[index]);
         } else {
           tryLoad(index + 1);
         }
@@ -77,13 +99,8 @@ export default function MobileScannerPage() {
       document.head.appendChild(script);
     };
 
-    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
-      jsQRRef.current = 'native';
-      setLibLoaded(true);
-      setLoadingLib(false);
-    } else {
-      tryLoad(0);
-    }
+    // Always try to load jsQR — it's the most reliable cross-platform scanner
+    tryLoad(0);
   }, []);
 
   // Sound
@@ -177,41 +194,64 @@ export default function MobileScannerPage() {
       setCameraActive(true);
       await new Promise(r => setTimeout(r, 500));
 
-      if (jsQRRef.current === 'native') {
-        const detector = new BarcodeDetector({ formats: ['qr_code'] });
-        const scanFrame = async () => {
-          if (!videoRef.current || !streamRef.current) return;
-          try {
-            const barcodes = await detector.detect(videoRef.current);
-            if (barcodes.length > 0 && !cooldownRef.current) {
-              const value = barcodes[0].rawValue;
-              if (value) processCheckin(value);
-            }
-          } catch (e) {}
+      // Reset native fail counter
+      nativeFailCountRef.current = 0;
+
+      // Unified scan loop: tries BarcodeDetector first, falls back to jsQR
+      const scanFrame = async () => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !streamRef.current) return;
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
           scanLoopRef.current = requestAnimationFrame(scanFrame);
-        };
-        scanLoopRef.current = requestAnimationFrame(scanFrame);
-      } else {
-        const scanFrame = () => {
-          const video = videoRef.current;
-          const canvas = canvasRef.current;
-          if (!video || !canvas || !streamRef.current || video.readyState !== video.HAVE_ENOUGH_DATA) {
-            scanLoopRef.current = requestAnimationFrame(scanFrame);
-            return;
+          return;
+        }
+
+        if (cooldownRef.current) {
+          scanLoopRef.current = requestAnimationFrame(scanFrame);
+          return;
+        }
+
+        let detected = false;
+
+        // Strategy 1: Try native BarcodeDetector (if available and not failed too many times)
+        if (useNativeRef.current && nativeDetectorRef.current && nativeFailCountRef.current < 150) {
+          try {
+            const barcodes = await nativeDetectorRef.current.detect(video);
+            if (barcodes.length > 0 && barcodes[0].rawValue) {
+              detected = true;
+              nativeFailCountRef.current = 0; // Reset on success
+              processCheckin(barcodes[0].rawValue);
+            } else {
+              nativeFailCountRef.current++;
+              // After ~2.5 seconds of no detections, log fallback
+              if (nativeFailCountRef.current === 150) {
+                console.log('[Scanner] BarcodeDetector not detecting — falling back to jsQR');
+              }
+            }
+          } catch (e) {
+            // BarcodeDetector threw error — disable it
+            useNativeRef.current = false;
+            console.log('[Scanner] BarcodeDetector error, switching to jsQR:', e.message);
           }
+        }
+
+        // Strategy 2: Use jsQR (always available as fallback, primary on most devices)
+        if (!detected && jsQRRef.current && canvas) {
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          if (jsQRRef.current && !cooldownRef.current) {
-            const code = jsQRRef.current(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-            if (code && code.data) processCheckin(code.data);
+          const code = jsQRRef.current(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+          if (code && code.data) {
+            processCheckin(code.data);
           }
-          scanLoopRef.current = requestAnimationFrame(scanFrame);
-        };
+        }
+
         scanLoopRef.current = requestAnimationFrame(scanFrame);
-      }
+      };
+      scanLoopRef.current = requestAnimationFrame(scanFrame);
     } catch (err) {
       if (err.name === 'NotAllowedError') setError('Camera permission denied. Check browser settings.');
       else if (err.name === 'NotFoundError') setError('No camera found.');
