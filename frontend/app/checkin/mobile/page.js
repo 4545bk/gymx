@@ -198,28 +198,30 @@ export default function MobileScannerPage() {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
+      // IMPORTANT: Set cameraActive FIRST so React renders the <video> element
+      setCameraActive(true);
+
+      // Wait for React to render the video element into the DOM
+      await new Promise(r => setTimeout(r, 100));
+
+      // Now videoRef.current exists — attach the stream
       if (videoRef.current) {
         const video = videoRef.current;
-        // Set attributes explicitly for mobile compatibility
         video.setAttribute('autoplay', '');
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
         video.muted = true;
         video.srcObject = stream;
 
-        // Wait for video metadata before playing
-        await new Promise((resolve, reject) => {
+        // Wait for video to be ready
+        await new Promise((resolve) => {
           video.onloadedmetadata = () => {
-            video.play()
-              .then(resolve)
-              .catch(resolve); // Resolve even on play error — autoplay may handle it
+            video.play().then(resolve).catch(resolve);
           };
-          // Timeout fallback in case metadata event doesn't fire
-          setTimeout(resolve, 2000);
+          setTimeout(resolve, 2000); // Timeout fallback
         });
       }
-      setCameraActive(true);
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 200));
 
       // Reset native fail counter
       nativeFailCountRef.current = 0;
