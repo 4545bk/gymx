@@ -36,7 +36,7 @@ export default function CheckinPage() {
   const API_BASE = typeof window !== 'undefined'
     ? `http://${window.location.hostname}:5000/api/v1`
     : (process.env.NEXT_PUBLIC_API_URL || '/api/v1');
-  const SCANNER_KEY = 'gymx-scanner-api-key-dev-only-change-in-prod';
+  const SCANNER_KEY = 'gymx-scanner-api-key-2026-c9f5e1d7b3a8f4c0e6d2b9a5c1f7e3d8';
 
   // ─── Online/Offline detection ─────────────────────────────
   useEffect(() => {

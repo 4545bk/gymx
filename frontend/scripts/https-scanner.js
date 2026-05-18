@@ -223,7 +223,7 @@ function getScannerHTML(apiBase) {
 </div>
 <canvas id="cv" style="display:none"></canvas>
 <script>
-const API='${apiBase}', KEY='gymx-scanner-api-key-dev-only-change-in-prod';
+const API='${apiBase}', KEY='gymx-scanner-api-key-2026-c9f5e1d7b3a8f4c0e6d2b9a5c1f7e3d8';
 let str=null,sl=null,cd=false,oc=0,nc=0,det=null,native=false,nativeFails=0;
 if('BarcodeDetector' in window){try{det=new BarcodeDetector({formats:['qr_code']});native=true;}catch(e){}}
 (function(){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';s.onerror=function(){const s2=document.createElement('script');s2.src='https://unpkg.com/jsqr@1.4.0/dist/jsQR.min.js';document.head.appendChild(s2);};document.head.appendChild(s);})();
