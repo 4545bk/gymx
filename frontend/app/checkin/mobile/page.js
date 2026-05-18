@@ -139,30 +139,40 @@ export default function MobileScannerPage() {
     setScanning(true);
     cooldownRef.current = true;
 
+    let scanResult = null;
+
     try {
       const res = await fetch(`${API_BASE}/checkin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-scanner-key': SCANNER_KEY },
         body: JSON.stringify({ memberId: id }),
       });
+
+      // Guard against non-JSON responses (Vercel 404/500 returns HTML)
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(`Server returned ${res.status} (not JSON)`);
+      }
+
       const data = await res.json();
-      setResult(data.data);
-      setStats(prev => ({
-        granted: prev.granted + (data.data.result === 'granted' ? 1 : 0),
-        denied: prev.denied + (data.data.result === 'denied' ? 1 : 0),
-      }));
-      playSound(data.data.result);
-      vibrate(data.data.result);
+      scanResult = data?.data || { result: 'denied', denyReason: 'error', message: 'Unexpected response from server' };
     } catch (err) {
-      setResult({ result: 'denied', denyReason: 'error', message: 'Network error — check WiFi' });
-      playSound('denied');
-      vibrate('denied');
+      console.error('[Scanner] Check-in error:', err.message);
+      scanResult = { result: 'denied', denyReason: 'error', message: 'Network error — check WiFi' };
     }
+
+    setResult(scanResult);
+    setStats(prev => ({
+      granted: prev.granted + (scanResult.result === 'granted' ? 1 : 0),
+      denied: prev.denied + (scanResult.result === 'denied' ? 1 : 0),
+    }));
+    playSound(scanResult.result);
+    vibrate(scanResult.result);
 
     setScanning(false);
     setManualId('');
     clearTimeout(timeoutRef.current);
-    const timeout = result?.result === 'granted' ? 3500 : 5000;
+    const timeout = scanResult.result === 'granted' ? 3500 : 5000;
     timeoutRef.current = setTimeout(() => { setResult(null); cooldownRef.current = false; }, timeout);
   }, [API_BASE, SCANNER_KEY, scanning, playSound, vibrate]);
 
