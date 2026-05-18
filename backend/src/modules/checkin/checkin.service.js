@@ -72,6 +72,7 @@ const processCheckin = async (memberId) => {
       _id: dbMember._id,
       memberId: dbMember.memberId,
       fullName: dbMember.fullName,
+      photoUrl: dbMember.photoUrl || null,
       status: dbMember.status,
       plan: {
         type: dbMember.plan.type,
@@ -94,7 +95,7 @@ const processCheckin = async (memberId) => {
       result: 'denied',
       denyReason: member.status, // 'expired', 'suspended', or 'frozen'
       message: `Membership is ${member.status}`,
-      member: { fullName: member.fullName },
+      member: { fullName: member.fullName, photoUrl: member.photoUrl || null },
     };
   }
 
@@ -129,7 +130,7 @@ const processCheckin = async (memberId) => {
       result: 'denied',
       denyReason: 'expired',
       message: `Membership expired on ${new Date(member.plan.expiryDate).toISOString().split('T')[0]}`,
-      member: { fullName: member.fullName },
+      member: { fullName: member.fullName, photoUrl: member.photoUrl || null },
     };
   }
 
@@ -146,7 +147,7 @@ const processCheckin = async (memberId) => {
         result: 'denied',
         denyReason: 'wrong-day',
         message: `3-day plan. Next allowed day: ${nextDay}`,
-        member: { fullName: member.fullName },
+        member: { fullName: member.fullName, photoUrl: member.photoUrl || null },
       };
     }
   }
@@ -212,6 +213,7 @@ const processCheckin = async (memberId) => {
       result: 'granted',
       member: {
         fullName: member.fullName,
+        photoUrl: member.photoUrl || null,
         planType: member.plan.type,
         expiryDate: new Date(member.plan.expiryDate).toISOString().split('T')[0],
         expiringSoon: daysUntilExpiry <= 5,
@@ -242,7 +244,7 @@ const processCheckin = async (memberId) => {
         result: 'denied',
         denyReason: 'duplicate',
         message: `Already checked in today at ${existing ? existing.checkedInAt.toISOString() : 'earlier'}`,
-        member: { fullName: member.fullName },
+        member: { fullName: member.fullName, photoUrl: member.photoUrl || null },
       };
     }
     throw err; // Re-throw unexpected errors

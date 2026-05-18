@@ -388,80 +388,212 @@ export default function MobileScannerPage() {
         )}
 
         {/* ═══════════════════════════════════════════════════ */}
-        {/* FULL-SCREEN RESULT OVERLAY */}
+        {/* FULL-SCREEN RESULT OVERLAY — Premium Design      */}
         {/* ═══════════════════════════════════════════════════ */}
-        {result && (
+        {result && (() => {
+          const isGranted = result.result === 'granted';
+          const denial = getDenial(result.denyReason);
+          return (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 999,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            background: result.result === 'granted'
-              ? 'linear-gradient(135deg, rgba(16,185,129,0.95), rgba(5,150,105,0.98))'
-              : 'linear-gradient(135deg, rgba(239,68,68,0.95), rgba(185,28,28,0.98))',
-            animation: 'resultFadeIn 300ms ease',
-            padding: '2rem',
-          }}>
-            {/* Big Icon */}
+            background: isGranted
+              ? 'linear-gradient(160deg, #064e3b 0%, #047857 40%, #059669 100%)'
+              : 'linear-gradient(160deg, #7f1d1d 0%, #b91c1c 40%, #dc2626 100%)',
+            animation: 'resultFadeIn 250ms ease-out',
+            padding: '1.5rem',
+            overflow: 'hidden',
+          }}
+          onClick={() => { setResult(null); cooldownRef.current = false; clearTimeout(timeoutRef.current); }}
+          >
+            {/* Background radial pulse */}
             <div style={{
-              fontSize: '5rem', marginBottom: '1rem',
-              animation: result.result === 'granted' ? 'bounceIn 500ms ease' : 'shakeX 500ms ease',
-              filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.3))',
-            }}>
-              {result.result === 'granted' ? '✅' : getDenial(result.denyReason).icon}
+              position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
+              width: '500px', height: '500px', borderRadius: '50%',
+              background: isGranted
+                ? 'radial-gradient(circle, rgba(16,185,129,0.3) 0%, transparent 70%)'
+                : 'radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%)',
+              animation: 'pulseGlow 2s ease-in-out infinite',
+              pointerEvents: 'none',
+            }} />
+
+            {/* Animated SVG Check / X */}
+            <div style={{ animation: 'bounceIn 600ms cubic-bezier(0.34, 1.56, 0.64, 1)', marginBottom: '1.25rem' }}>
+              {isGranted ? (
+                <svg width="100" height="100" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="4" />
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeWidth="4"
+                    strokeDasharray="283" strokeDashoffset="283" strokeLinecap="round"
+                    style={{ animation: 'circleStroke 700ms ease-out 200ms forwards' }} />
+                  <path d="M30 52 L44 66 L70 36" fill="none" stroke="white" strokeWidth="5"
+                    strokeLinecap="round" strokeLinejoin="round"
+                    strokeDasharray="60" strokeDashoffset="60"
+                    style={{ animation: 'checkStroke 500ms ease-out 500ms forwards' }} />
+                </svg>
+              ) : (
+                <svg width="100" height="100" viewBox="0 0 100 100" style={{ animation: 'shakeX 600ms ease' }}>
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="4" />
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeWidth="4"
+                    strokeDasharray="283" strokeDashoffset="283" strokeLinecap="round"
+                    style={{ animation: 'circleStroke 700ms ease-out 200ms forwards' }} />
+                  <path d="M35 35 L65 65 M65 35 L35 65" fill="none" stroke="white" strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeDasharray="42.4" strokeDashoffset="42.4"
+                    style={{ animation: 'checkStroke 400ms ease-out 500ms forwards' }} />
+                </svg>
+              )}
             </div>
 
-            {/* Member Name */}
-            <div style={{
-              fontSize: '2rem', fontWeight: 900, color: 'white',
-              textAlign: 'center', marginBottom: '0.5rem',
-              textShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              animation: 'slideUp 400ms ease',
-            }}>
-              {result.member?.fullName || 'Unknown'}
-            </div>
-
-            {/* Result Badge */}
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-              padding: '0.5rem 1.5rem', borderRadius: '9999px',
-              fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              background: 'rgba(255,255,255,0.2)',
-              color: 'white',
-              border: '2px solid rgba(255,255,255,0.4)',
-              animation: 'pulseGlow 1.5s ease infinite',
-            }}>
-              {result.result === 'granted' ? '✓ ACCESS GRANTED' : getDenial(result.denyReason).label}
-            </div>
-
-            {/* Plan info (granted only) */}
-            {result.result === 'granted' && result.member?.planType && (
+            {/* Member Photo */}
+            {result.member?.photoUrl ? (
               <div style={{
-                marginTop: '1rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)',
-                textTransform: 'capitalize', animation: 'slideUp 500ms ease',
+                width: '90px', height: '90px', borderRadius: '50%', overflow: 'hidden',
+                border: `3px solid ${isGranted ? 'rgba(167,243,208,0.8)' : 'rgba(252,165,165,0.8)'}`,
+                boxShadow: `0 0 30px ${isGranted ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)'}`,
+                animation: 'slideUp 400ms ease-out 150ms both',
+                marginBottom: '1rem',
               }}>
-                Plan: <strong style={{ color: 'white' }}>{result.member.planType}</strong>
+                <img src={result.member.photoUrl} alt="" style={{
+                  width: '100%', height: '100%', objectFit: 'cover',
+                }} />
+              </div>
+            ) : (
+              <div style={{
+                width: '90px', height: '90px', borderRadius: '50%',
+                border: `3px solid ${isGranted ? 'rgba(167,243,208,0.6)' : 'rgba(252,165,165,0.6)'}`,
+                boxShadow: `0 0 30px ${isGranted ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(255,255,255,0.1)',
+                animation: 'slideUp 400ms ease-out 150ms both',
+                marginBottom: '1rem',
+                fontSize: '2.2rem',
+              }}>
+                {isGranted ? '🏋️' : denial.icon}
               </div>
             )}
 
-            {/* Denied message */}
-            {result.result === 'denied' && result.message && (
+            {/* Member Name */}
+            <div style={{
+              fontSize: '1.75rem', fontWeight: 900, color: 'white',
+              textAlign: 'center', marginBottom: '0.25rem',
+              textShadow: '0 2px 12px rgba(0,0,0,0.3)',
+              animation: 'slideUp 400ms ease-out 250ms both',
+              letterSpacing: '-0.02em',
+            }}>
+              {result.member?.fullName || 'Unknown Member'}
+            </div>
+
+            {/* Member ID */}
+            {result.member?.memberId && (
               <div style={{
-                marginTop: '1rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)',
-                textAlign: 'center', maxWidth: '300px', animation: 'slideUp 500ms ease',
+                fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)',
+                fontFamily: 'monospace', letterSpacing: '0.1em',
+                animation: 'slideUp 400ms ease-out 300ms both',
+                marginBottom: '1rem',
               }}>
-                {result.message}
+                {result.member.memberId}
+              </div>
+            )}
+
+            {/* Status Badge */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.625rem 1.75rem', borderRadius: '9999px',
+              fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase',
+              letterSpacing: '0.12em',
+              background: isGranted
+                ? 'rgba(255,255,255,0.2)'
+                : 'rgba(0,0,0,0.2)',
+              color: 'white',
+              border: `2px solid ${isGranted ? 'rgba(167,243,208,0.5)' : 'rgba(252,165,165,0.5)'}`,
+              backdropFilter: 'blur(8px)',
+              animation: 'slideUp 400ms ease-out 350ms both',
+              boxShadow: `0 0 20px ${isGranted ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            }}>
+              {isGranted ? '✓ ACCESS GRANTED' : `✗ ${denial.label}`}
+            </div>
+
+            {/* Glassmorphism Info Card */}
+            {(isGranted || result.message) && (
+              <div style={{
+                marginTop: '1.25rem', padding: '1rem 1.5rem',
+                background: 'rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(12px)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255,255,255,0.15)',
+                maxWidth: '320px', width: '100%',
+                animation: 'slideUp 400ms ease-out 450ms both',
+              }}>
+                {isGranted && result.member?.planType && (
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    marginBottom: result.member?.expiringSoon ? '0.5rem' : 0,
+                  }}>
+                    <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>Plan</span>
+                    <span style={{
+                      fontSize: '0.85rem', fontWeight: 700, color: 'white',
+                      textTransform: 'capitalize',
+                      background: 'rgba(255,255,255,0.15)', padding: '0.2rem 0.75rem',
+                      borderRadius: '6px',
+                    }}>
+                      {result.member.planType}
+                    </span>
+                  </div>
+                )}
+                {isGranted && result.member?.expiryDate && (
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    marginTop: '0.5rem',
+                  }}>
+                    <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>Expires</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>
+                      {result.member.expiryDate}
+                    </span>
+                  </div>
+                )}
+                {isGranted && result.member?.expiringSoon && (
+                  <div style={{
+                    marginTop: '0.75rem', padding: '0.4rem 0.75rem',
+                    background: 'rgba(245,158,11,0.25)', borderRadius: '8px',
+                    border: '1px solid rgba(245,158,11,0.4)',
+                    fontSize: '0.75rem', color: '#fbbf24', fontWeight: 600,
+                    textAlign: 'center',
+                  }}>
+                    ⚠ Membership expiring soon — please renew
+                  </div>
+                )}
+                {!isGranted && result.message && (
+                  <div style={{
+                    fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)',
+                    textAlign: 'center', lineHeight: 1.5,
+                  }}>
+                    {result.message}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Check-in time */}
+            {isGranted && result.checkedInAt && (
+              <div style={{
+                marginTop: '0.75rem', fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)',
+                animation: 'slideUp 400ms ease-out 550ms both',
+              }}>
+                {new Date(result.checkedInAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </div>
             )}
 
             {/* Tap to dismiss */}
             <div style={{
               position: 'absolute', bottom: '2rem',
-              fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)',
+              fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)',
+              animation: 'slideUp 400ms ease-out 600ms both',
             }}>
-              Auto-dismissing...
+              Tap anywhere to dismiss
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* Camera */}
         {!result && canUseCamera && (
@@ -618,6 +750,12 @@ export default function MobileScannerPage() {
           0% { opacity: 0; transform: scale(0.85); }
           60% { transform: scale(1.03); }
           100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes circleStroke {
+          to { stroke-dashoffset: 0; }
+        }
+        @keyframes checkStroke {
+          to { stroke-dashoffset: 0; }
         }
       `}</style>
     </div>
