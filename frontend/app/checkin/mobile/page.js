@@ -186,13 +186,40 @@ export default function MobileScannerPage() {
     if (!libLoaded) { setError('Scanner library still loading...'); return; }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: cameraFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
+      // Use simple constraints for maximum mobile compatibility
+      const constraints = {
+        video: {
+          facingMode: { ideal: cameraFacing },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+
+      if (videoRef.current) {
+        const video = videoRef.current;
+        // Set attributes explicitly for mobile compatibility
+        video.setAttribute('autoplay', '');
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.muted = true;
+        video.srcObject = stream;
+
+        // Wait for video metadata before playing
+        await new Promise((resolve, reject) => {
+          video.onloadedmetadata = () => {
+            video.play()
+              .then(resolve)
+              .catch(resolve); // Resolve even on play error — autoplay may handle it
+          };
+          // Timeout fallback in case metadata event doesn't fire
+          setTimeout(resolve, 2000);
+        });
+      }
       setCameraActive(true);
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 300));
 
       // Reset native fail counter
       nativeFailCountRef.current = 0;
@@ -419,8 +446,8 @@ export default function MobileScannerPage() {
         {!result && canUseCamera && (
           <>
             {cameraActive ? (
-              <div style={{ position: 'relative', width: '100%', maxWidth: '400px', borderRadius: 'var(--radius-xl)', overflow: 'hidden', border: '2px solid var(--accent-primary)' }}>
-                <video ref={videoRef} style={{ width: '100%', display: 'block' }} playsInline muted />
+              <div style={{ position: 'relative', width: '100%', maxWidth: '400px', borderRadius: 'var(--radius-xl)', overflow: 'hidden', border: '2px solid var(--accent-primary)', background: '#000', minHeight: '280px' }}>
+                <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', minHeight: '280px', display: 'block', objectFit: 'cover' }} />
                 {/* Scan overlay */}
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                   <div style={{ width: '200px', height: '200px', position: 'relative' }}>
