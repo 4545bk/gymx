@@ -70,6 +70,56 @@
   --sidebar-collapsed: 72px;
 }
 
+/* ─── Light Mode ──────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-elevated: #f1f5f9;
+  --bg-input: #ffffff;
+
+  --accent-primary: #059669;
+  --accent-primary-hover: #047857;
+  --accent-secondary: #64748b;
+  --accent-gradient: linear-gradient(135deg, #059669, #047857);
+  --accent-glow: 0 0 20px rgba(5, 150, 105, 0.12);
+  --accent-teal: #059669;
+  --accent-teal-hover: #047857;
+
+  --success: #16a34a;
+  --success-bg: rgba(22, 163, 74, 0.08);
+  --warning: #d97706;
+  --warning-bg: rgba(217, 119, 6, 0.08);
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.06);
+  --info: #2563eb;
+  --info-bg: rgba(37, 99, 235, 0.06);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-accent: #059669;
+
+  --border: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --border-accent: rgba(5, 150, 105, 0.25);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 20px rgba(5, 150, 105, 0.06);
+}
+
+[data-theme="light"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 /* ─── Reset ────────────────────────────────────────────────── */
 *, *::before, *::after {
   margin: 0;
@@ -1047,3 +1097,111 @@ tr:last-child td { border-bottom: none; }
   border-bottom: 1px solid var(--border);
 }
 
+/* ─── Action Dropdown ──────────────────────────────────────── */
+.action-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+.action-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  min-width: 180px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 60;
+  padding: 0.375rem;
+  animation: menuIn 150ms var(--ease-out);
+}
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+.action-menu-item:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.action-menu-item.danger {
+  color: var(--danger);
+}
+.action-menu-item.danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.action-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.25rem 0;
+}
+@keyframes menuIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Theme Toggle ─────────────────────────────────────────── */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.825rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: 0.5rem;
+}
+.theme-toggle:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+.theme-toggle svg {
+  transition: transform 300ms var(--ease-out);
+}
+.theme-toggle:hover svg {
+  transform: rotate(15deg);
+}
+
+/* ─── Status Radio Group ───────────────────────────────────── */
+.status-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: transparent;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+}
+.status-option:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-elevated);
+}
+.status-option.selected {
+  border-color: var(--accent-primary);
+  background: var(--info-bg);
+}

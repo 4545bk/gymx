@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ProtectedLayout from '@/components/ProtectedLayout';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
 import api from '@/lib/api';
-import { Plus, Search, Filter, Eye, QrCode, UserX, CreditCard, RotateCw, Camera } from 'lucide-react';
+import { Plus, Search, Filter, Eye, QrCode, UserX, CreditCard, RotateCw, Camera, MoreVertical, Edit3, Trash2, ShieldAlert, ShieldCheck, Snowflake, Ban, AlertTriangle, DollarSign, Banknote } from 'lucide-react';
 
 export default function MembersPage() {
   const { staff } = useAuth();
@@ -21,8 +21,27 @@ export default function MembersPage() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [showQR, setShowQR] = useState(null);
   const [printingCard, setPrintingCard] = useState(null);
-  const [showRenewModal, setShowRenewModal] = useState(null); // memberId being printed
+  const [showRenewModal, setShowRenewModal] = useState(null);
   const [availablePlans, setAvailablePlans] = useState([]);
+  const [openMenu, setOpenMenu] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(null);
+  const menuRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenu(null);
+      }
+    };
+    if (openMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [openMenu]);
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -221,7 +240,7 @@ export default function MembersPage() {
                         <QrCode size={15} />
                       </button>
                       {(staff?.role === 'owner' || staff?.role === 'receptionist') && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <>
                           <button
                             className="btn btn-ghost btn-sm"
                             onClick={() => downloadCard(m.memberId)}
@@ -234,12 +253,44 @@ export default function MembersPage() {
                               : <CreditCard size={15} />
                             }
                           </button>
-                          {m.card?.issuedAt && (
-                            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                              Issued {new Date(m.card.issuedAt).toLocaleDateString('en-GB')}
-                            </span>
-                          )}
-                        </div>
+                          {/* Action Dropdown */}
+                          <div className="action-dropdown" ref={openMenu === m.memberId ? menuRef : null}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setOpenMenu(openMenu === m.memberId ? null : m.memberId)} title="More actions">
+                              <MoreVertical size={15} />
+                            </button>
+                            {openMenu === m.memberId && (
+                              <div className="action-menu">
+                                <button className="action-menu-item" onClick={() => { setOpenMenu(null); viewMember(m.memberId); }}>
+                                  <Eye size={14} /> View Details
+                                </button>
+                                <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowStatusModal(m); }}>
+                                  <ShieldAlert size={14} /> Change Status
+                                </button>
+                                <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowEditModal(m); }}>
+                                  <Edit3 size={14} /> Edit Member
+                                </button>
+                                {m.paymentStatus !== 'paid' && (
+                                  <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowPaymentModal(m); }}>
+                                    <DollarSign size={14} /> Record Payment
+                                  </button>
+                                )}
+                                {(m.status === 'expired' || m.plan?.daysRemaining <= 5) && (
+                                  <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowRenewModal(m); setSelectedMember(null); }}>
+                                    <RotateCw size={14} /> Renew Plan
+                                  </button>
+                                )}
+                                {staff?.role === 'owner' && (
+                                  <>
+                                    <div className="action-menu-divider" />
+                                    <button className="action-menu-item danger" onClick={() => { setOpenMenu(null); setShowDeleteModal(m); }}>
+                                      <Trash2 size={14} /> Delete Member
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </>
                       )}
                     </div>
                   </td>
@@ -492,6 +543,18 @@ export default function MembersPage() {
 
       {/* Renew Membership Modal */}
       {showRenewModal && <RenewModal member={showRenewModal} onClose={() => setShowRenewModal(null)} onSuccess={() => { setShowRenewModal(null); fetchMembers(); toast.success('Membership renewed successfully'); }} />}
+
+      {/* Status Change Modal */}
+      {showStatusModal && <StatusChangeModal member={showStatusModal} onClose={() => setShowStatusModal(null)} onSuccess={() => { setShowStatusModal(null); fetchMembers(); toast.success('Member status updated'); }} />}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && <DeleteConfirmModal member={showDeleteModal} onClose={() => setShowDeleteModal(null)} onSuccess={() => { setShowDeleteModal(null); fetchMembers(); toast.success('Member deleted successfully'); }} />}
+
+      {/* Edit Member Modal */}
+      {showEditModal && <EditMemberModal member={showEditModal} onClose={() => setShowEditModal(null)} onSuccess={() => { setShowEditModal(null); fetchMembers(); toast.success('Member updated successfully'); }} />}
+
+      {/* Record Payment Modal */}
+      {showPaymentModal && <RecordPaymentModal member={showPaymentModal} onClose={() => setShowPaymentModal(null)} onSuccess={() => { setShowPaymentModal(null); fetchMembers(); toast.success('Payment recorded successfully'); }} />}
     </ProtectedLayout>
   );
 }
@@ -869,3 +932,510 @@ function RenewModal({ member, onClose, onSuccess }) {
   );
 }
 
+
+/* ══════════════════════════════════════════════════════════════
+   Status Change Modal
+   ══════════════════════════════════════════════════════════════ */
+function StatusChangeModal({ member, onClose, onSuccess }) {
+  const [status, setStatus] = useState(member.status === 'expired' ? 'active' : member.status);
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const statusOptions = [
+    { value: 'active', label: 'Active', icon: ShieldCheck, color: 'var(--success)', desc: 'Member can check in normally' },
+    { value: 'suspended', label: 'Suspended', icon: Ban, color: 'var(--warning)', desc: 'Temporarily blocked from check-in' },
+    { value: 'frozen', label: 'Frozen', icon: Snowflake, color: 'var(--info)', desc: 'Membership paused (e.g. travel, injury)' },
+  ];
+
+  const needsReason = status === 'suspended' || status === 'frozen';
+
+  const handleSubmit = async () => {
+    if (needsReason && !reason.trim()) {
+      setError('Please provide a reason');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await api.patch(`/members/${member.memberId}/status`, {
+        status,
+        ...(needsReason ? { reason: reason.trim() } : {}),
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Failed to update status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+        <div className="modal-header">
+          <h2>Change Status</h2>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Current status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)' }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%', background: 'var(--accent-primary)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.85rem', fontWeight: 700,
+          }}>
+            {member.fullName?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{member.fullName}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{member.memberId} · Currently <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{member.status}</span></div>
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ padding: '0.75rem', background: 'var(--danger-bg)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--danger)' }}>
+            {error}
+          </div>
+        )}
+
+        {/* Status options */}
+        <div className="form-group">
+          <label className="form-label">New Status</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {statusOptions.map((opt) => {
+              const Icon = opt.icon;
+              const isSelected = status === opt.value;
+              const isCurrent = member.status === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`status-option ${isSelected ? 'selected' : ''}`}
+                  onClick={() => setStatus(opt.value)}
+                  disabled={isCurrent}
+                  style={{ opacity: isCurrent ? 0.5 : 1 }}
+                >
+                  <Icon size={18} style={{ color: opt.color, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+                      {opt.label} {isCurrent && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>(current)</span>}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{opt.desc}</div>
+                  </div>
+                  {isSelected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-primary)' }} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Reason (required for suspend/freeze) */}
+        {needsReason && (
+          <div className="form-group">
+            <label className="form-label">Reason <span style={{ color: 'var(--danger)' }}>*</span></label>
+            <textarea
+              className="form-input"
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={status === 'suspended' ? 'e.g. Unpaid dues, rule violation...' : 'e.g. Medical leave, traveling...'}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+        )}
+
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button
+            className="btn btn-primary"
+            onClick={handleSubmit}
+            disabled={loading || status === member.status}
+          >
+            {loading ? <div className="spinner" style={{ borderTopColor: 'white' }}></div> : 'Update Status'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Delete Confirmation Modal
+   ══════════════════════════════════════════════════════════════ */
+function DeleteConfirmModal({ member, onClose, onSuccess }) {
+  const [confirmText, setConfirmText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const nameMatch = confirmText.trim().toLowerCase() === member.fullName.toLowerCase();
+
+  const handleDelete = async () => {
+    if (!nameMatch) return;
+    setLoading(true);
+    setError('');
+    try {
+      await api.delete(`/members/${member.memberId}`);
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Failed to delete member');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+        <div className="modal-header">
+          <h2 style={{ color: 'var(--danger)' }}>Delete Member</h2>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+
+        <div style={{ padding: '1rem', background: 'var(--danger-bg)', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+          <AlertTriangle size={20} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: '2px' }} />
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            This will set <strong style={{ color: 'var(--text-primary)' }}>{member.fullName}</strong>&apos;s status to <strong style={{ color: 'var(--danger)' }}>expired</strong> and remove them from active member lists. This is a soft delete — their data and history will be preserved.
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ padding: '0.75rem', background: 'var(--danger-bg)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--danger)' }}>
+            {error}
+          </div>
+        )}
+
+        <div className="form-group">
+          <label className="form-label">
+            Type <strong style={{ color: 'var(--text-primary)' }}>{member.fullName}</strong> to confirm
+          </label>
+          <input
+            className="form-input"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={member.fullName}
+            autoFocus
+          />
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button
+            className="btn btn-danger"
+            onClick={handleDelete}
+            disabled={!nameMatch || loading}
+          >
+            {loading ? <div className="spinner" style={{ borderTopColor: 'white' }}></div> : <><Trash2 size={14} /> Delete Member</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Edit Member Modal
+   ══════════════════════════════════════════════════════════════ */
+function EditMemberModal({ member, onClose, onSuccess }) {
+  const [form, setForm] = useState({
+    fullName: member.fullName || '',
+    phone: member.phone || '',
+    emergencyName: member.emergencyContact?.name || '',
+    emergencyPhone: member.emergencyContact?.phone || '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const payload = {
+        fullName: form.fullName,
+        phone: form.phone,
+      };
+      if (form.emergencyName || form.emergencyPhone) {
+        payload.emergencyContact = {
+          name: form.emergencyName || null,
+          phone: form.emergencyPhone || null,
+        };
+      }
+      await api.put(`/members/${member.memberId}`, payload);
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Failed to update member');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+        <div className="modal-header">
+          <h2>Edit Member</h2>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Member ID badge */}
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem', fontFamily: 'monospace' }}>
+          {member.memberId}
+        </div>
+
+        {error && (
+          <div style={{ padding: '0.75rem', background: 'var(--danger-bg)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--danger)' }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Full Name</label>
+            <input className="form-input" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Phone</label>
+            <input className="form-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
+          </div>
+
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem', marginTop: '0.5rem' }}>
+            Emergency Contact
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label className="form-label">Name</label>
+              <input className="form-input" value={form.emergencyName} onChange={(e) => setForm({ ...form, emergencyName: e.target.value })} placeholder="Contact name" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Phone</label>
+              <input className="form-input" value={form.emergencyPhone} onChange={(e) => setForm({ ...form, emergencyPhone: e.target.value })} placeholder="+251..." />
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? <div className="spinner" style={{ borderTopColor: 'white' }}></div> : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Record Payment Modal — Quick cash/bank payment from Members page
+   ══════════════════════════════════════════════════════════════ */
+function RecordPaymentModal({ member, onClose, onSuccess }) {
+  const [amount, setAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [payFull, setPayFull] = useState(true);
+
+  const remainingBalance = member.billing?.remainingBalance || member.billing?.totalDue || 0;
+  const totalDue = member.billing?.totalDue || 0;
+  const amountPaid = member.billing?.amountPaid || 0;
+
+  // Auto-fill amount when "Pay Full" is selected
+  useEffect(() => {
+    if (payFull && remainingBalance > 0) {
+      setAmount(remainingBalance.toString());
+    }
+  }, [payFull, remainingBalance]);
+
+  const formatPrice = (cents) => `${(cents / 100).toLocaleString()} ETB`;
+
+  const handleSubmit = async () => {
+    const parsedAmount = parseInt(amount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+    if (parsedAmount > remainingBalance && remainingBalance > 0) {
+      setError(`Amount exceeds remaining balance (${formatPrice(remainingBalance)})`);
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      await api.post('/dues/pay', {
+        memberId: member.memberId,
+        amount: parsedAmount,
+        paymentMethod,
+        description: description.trim() || `${paymentMethod === 'cash' ? 'Cash' : paymentMethod === 'bank-transfer' ? 'Bank transfer' : 'Other'} payment`,
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Failed to record payment');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const paymentMethods = [
+    { value: 'cash', label: 'Cash', icon: Banknote, color: 'var(--success)' },
+    { value: 'bank-transfer', label: 'Bank Transfer', icon: CreditCard, color: 'var(--info)' },
+    { value: 'other', label: 'Other', icon: DollarSign, color: 'var(--warning)' },
+  ];
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+        <div className="modal-header">
+          <h2>Record Payment</h2>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Member info */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)' }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%',
+            background: member.photoUrl ? 'transparent' : 'var(--accent-primary)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontSize: '0.85rem', fontWeight: 700,
+            overflow: 'hidden', flexShrink: 0,
+          }}>
+            {member.photoUrl
+              ? <img src={member.photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : member.fullName?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+            }
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{member.fullName}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{member.memberId}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Balance Due</div>
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: remainingBalance > 0 ? 'var(--danger)' : 'var(--success)' }}>
+              {formatPrice(remainingBalance)}
+            </div>
+          </div>
+        </div>
+
+        {/* Billing summary */}
+        {totalDue > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            <div style={{ padding: '0.5rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Due</div>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{formatPrice(totalDue)}</div>
+            </div>
+            <div style={{ padding: '0.5rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Paid</div>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--success)' }}>{formatPrice(amountPaid)}</div>
+            </div>
+            <div style={{ padding: '0.5rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Remaining</div>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--danger)' }}>{formatPrice(remainingBalance)}</div>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ padding: '0.75rem', background: 'var(--danger-bg)', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--danger)' }}>
+            {error}
+          </div>
+        )}
+
+        {/* Payment method */}
+        <div className="form-group">
+          <label className="form-label">Payment Method</label>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {paymentMethods.map((pm) => {
+              const Icon = pm.icon;
+              const isSelected = paymentMethod === pm.value;
+              return (
+                <button
+                  key={pm.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(pm.value)}
+                  style={{
+                    flex: 1, padding: '0.6rem 0.5rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: `2px solid ${isSelected ? pm.color : 'var(--border)'}`,
+                    background: isSelected ? `${pm.color}15` : 'var(--bg-elevated)',
+                    cursor: 'pointer', textAlign: 'center',
+                    transition: 'all 150ms ease',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem',
+                  }}
+                >
+                  <Icon size={18} style={{ color: isSelected ? pm.color : 'var(--text-muted)' }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: isSelected ? 600 : 400, color: isSelected ? 'var(--text-primary)' : 'var(--text-muted)' }}>{pm.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Amount */}
+        <div className="form-group">
+          <label className="form-label">Amount (in cents)</label>
+          {remainingBalance > 0 && (
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => { setPayFull(true); setAmount(remainingBalance.toString()); }}
+                className={`btn btn-sm ${payFull ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.75rem' }}
+              >
+                Pay Full — {formatPrice(remainingBalance)}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPayFull(false); setAmount(''); }}
+                className={`btn btn-sm ${!payFull ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.75rem' }}
+              >
+                Partial Payment
+              </button>
+            </div>
+          )}
+          <input
+            className="form-input"
+            type="number"
+            min={1}
+            max={remainingBalance || undefined}
+            value={amount}
+            onChange={(e) => { setAmount(e.target.value); setPayFull(false); }}
+            placeholder={remainingBalance > 0 ? `Max: ${remainingBalance}` : 'Enter amount in cents'}
+            disabled={payFull && remainingBalance > 0}
+          />
+          {amount && parseInt(amount) > 0 && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              = {formatPrice(parseInt(amount))}
+            </div>
+          )}
+        </div>
+
+        {/* Description */}
+        <div className="form-group">
+          <label className="form-label">Note <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+          <input
+            className="form-input"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g. Cash received at front desk"
+          />
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button
+            className="btn btn-primary"
+            onClick={handleSubmit}
+            disabled={loading || !amount || parseInt(amount) <= 0}
+            style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
+          >
+            {loading
+              ? <div className="spinner" style={{ borderTopColor: 'white' }}></div>
+              : <><DollarSign size={14} /> Record Payment</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -7,7 +8,7 @@ import {
   LayoutDashboard, Users, ScanLine, CalendarCheck,
   UserCog, DollarSign, Package, Bell, BarChart3,
   LogOut, Dumbbell, ShoppingCart, Tags, Settings, Wallet, X,
-  UserPlus, User,
+  UserPlus, User, Sun, Moon,
 } from 'lucide-react';
 
 const navItems = [
@@ -38,6 +39,21 @@ const navItems = [
 export default function Sidebar({ mobileOpen, onClose }) {
   const pathname = usePathname();
   const { staff, logout } = useAuth();
+  const [theme, setTheme] = useState('dark');
+
+  // Read theme from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('gymx-theme') || 'dark';
+    setTheme(saved);
+    document.documentElement.setAttribute('data-theme', saved);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('gymx-theme', next);
+    document.documentElement.setAttribute('data-theme', next);
+  };
 
   if (!staff) return null;
 
@@ -98,6 +114,12 @@ export default function Sidebar({ mobileOpen, onClose }) {
       )}
 
       <div className="sidebar-footer">
+        {/* Theme Toggle */}
+        <button className="theme-toggle" onClick={toggleTheme}>
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+        </button>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
           <div className="avatar-sm" style={{
             width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
