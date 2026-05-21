@@ -93,5 +93,6 @@ const paymentSchema = new mongoose.Schema({
 paymentSchema.index({ memberRef: 1, recordedAt: -1 });
 paymentSchema.index({ 'period.year': 1, 'period.month': 1, direction: 1 });
 paymentSchema.index({ direction: 1, expenseCategory: 1, recordedAt: -1 });
+paymentSchema.index({ recordedAt: 1, direction: 1 });
 
 module.exports = mongoose.model('Payment', paymentSchema);

@@ -153,9 +153,18 @@ const getRevenueSeries = async (matchFilter, groupBy) => {
  * Members report — growth and status breakdown.
  */
 const getMembersReport = async () => {
-  const { getDaysUntilExpiry } = require('../../utils/dateHelpers');
+  const { nowLocal } = require('../../utils/dateHelpers');
+  const { startOfDay } = require('date-fns');
 
-  const [statusBreakdown, planBreakdown, newThisMonth, allActive] = await Promise.all([
+  const todayLocal = startOfDay(nowLocal());
+
+  const future7Days = new Date(todayLocal);
+  future7Days.setDate(future7Days.getDate() + 7);
+
+  const future30Days = new Date(todayLocal);
+  future30Days.setDate(future30Days.getDate() + 30);
+
+  const [statusBreakdown, planBreakdown, newThisMonth, expiringIn7Days, expiringIn30Days] = await Promise.all([
     Member.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]),
@@ -166,7 +175,14 @@ const getMembersReport = async () => {
     Member.countDocuments({
       createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
     }),
-    Member.find({ status: 'active' }).select('plan.expiryDate').lean(),
+    Member.countDocuments({
+      status: 'active',
+      'plan.expiryDate': { $gte: todayLocal, $lte: future7Days },
+    }),
+    Member.countDocuments({
+      status: 'active',
+      'plan.expiryDate': { $gte: todayLocal, $lte: future30Days },
+    }),
   ]);
 
   const statusMap = {};
@@ -174,15 +190,6 @@ const getMembersReport = async () => {
 
   const byPlan = {};
   planBreakdown.forEach((p) => { byPlan[p._id] = p.count; });
-
-  // Count expiring members
-  let expiringIn7Days = 0;
-  let expiringIn30Days = 0;
-  allActive.forEach((m) => {
-    const days = getDaysUntilExpiry(m.plan.expiryDate);
-    if (days >= 0 && days <= 7) expiringIn7Days++;
-    if (days >= 0 && days <= 30) expiringIn30Days++;
-  });
 
   // Churn = members who expired this month
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -254,16 +261,25 @@ const getRetentionMetrics = async () => {
   const fourteenDaysAgoStr = fourteenDaysAgo.toISOString().split('T')[0];
 
   // Active members who haven't checked in for 14+ days
-  const activeMembers = await Member.find({ status: 'active' }).select('memberId fullName plan phone').lean();
   const recentCheckins = await Attendance.distinct('memberId', {
     date: { $gte: fourteenDaysAgoStr },
     status: 'granted',
   });
-  const recentSet = new Set(recentCheckins);
-  const atRisk = activeMembers
-    .filter(m => !recentSet.has(m.memberId))
-    .map(m => ({ memberId: m.memberId, fullName: m.fullName, phone: m.phone, expiryDate: m.plan?.expiryDate }))
-    .slice(0, 50);
+
+  const atRiskMembers = await Member.find({
+    status: 'active',
+    memberId: { $nin: recentCheckins },
+  })
+  .select('memberId fullName plan.expiryDate phone')
+  .limit(50)
+  .lean();
+
+  const atRisk = atRiskMembers.map(m => ({
+    memberId: m.memberId,
+    fullName: m.fullName,
+    phone: m.phone,
+    expiryDate: m.plan?.expiryDate,
+  }));
 
   // Churn rate: expired this month / total active
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);

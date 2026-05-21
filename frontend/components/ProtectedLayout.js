@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import Sidebar from '@/components/Sidebar';
 import { Menu, Search, Bell, HelpCircle, ScanLine } from 'lucide-react';
+import ApiStatusBanner from '@/components/ApiStatusBanner';
 
 export default function ProtectedLayout({ children, title, actions }) {
   const { isAuthenticated, loading, staff } = useAuth();
@@ -75,6 +76,7 @@ export default function ProtectedLayout({ children, title, actions }) {
             </div>
           </div>
         </div>
+        <ApiStatusBanner />
         <div className="page-content">
           {children}
         </div>

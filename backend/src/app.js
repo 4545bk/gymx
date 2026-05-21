@@ -18,7 +18,7 @@ app.use(cors({
   origin: true, // Allow all origins — auth is handled by JWT, not CORS
   credentials: true, // Required for HTTP-only refresh token cookies
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-scanner-key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-scanner-key', 'x-branch-id'],
 }));
 
 // ─── Body Parsing ────────────────────────────────────────────
@@ -28,6 +28,11 @@ app.use(express.json({ limit: '50mb' })); // 50mb to support backup restore uplo
 // ─── Health Check ────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Versioned health endpoint for frontend API status monitoring
+app.get('/api/v1/health', (req, res) => {
+  res.json({ status: 'ok', ts: Date.now() });
 });
 
 // ─── Rate Limiting ───────────────────────────────────────────

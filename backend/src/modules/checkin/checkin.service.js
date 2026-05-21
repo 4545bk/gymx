@@ -15,7 +15,7 @@ const Member = require('../../models/Member');
 const Attendance = require('../../models/Attendance');
 const Alert = require('../../models/Alert');
 const { safeGet, safeSet, safeDel } = require('../../config/redis');
-const { getTodayDateString, getTodayWeekday, getDaysUntilExpiry, isExpired, getNextAllowedDay } = require('../../utils/dateHelpers');
+const { getTodayDateString, getTodayWeekday, getDaysUntilExpiry, isExpired, getNextAllowedDay, getDateStringForTimestamp } = require('../../utils/dateHelpers');
 const { broadcast } = require('../../utils/sseManager');
 const { buildCachePayload } = require('../members/members.service');
 
@@ -26,8 +26,15 @@ const MEMBER_ID_REGEX = /^MBR-[A-Z0-9]{8}$/;
  * Main check-in function — the 12-step flow.
  * Steps 1 and 2 are handled by the route and scannerAuth middleware.
  */
-const processCheckin = async (memberId) => {
-  const todayDate = getTodayDateString();
+const processCheckin = async (memberId, { offlineQueued = false, originalScannedAt = null } = {}) => {
+  // For offline-queued check-ins, use the original scan timestamp for date calculation
+  const checkinTimestamp = (offlineQueued && originalScannedAt)
+    ? new Date(originalScannedAt)
+    : new Date();
+  const todayDate = (offlineQueued && originalScannedAt)
+    ? getDateStringForTimestamp(originalScannedAt)
+    : getTodayDateString();
+  const source = offlineQueued ? 'offline-sync' : 'live';
 
   // ─── Step 3: Validate memberId format ─────────────────────
   if (!MEMBER_ID_REGEX.test(memberId)) {
@@ -88,7 +95,7 @@ const processCheckin = async (memberId) => {
   // ─── Step 6: Check membership status ──────────────────────
   if (member.status !== 'active') {
     // Write denied attendance record
-    await writeDeniedAttendance(member, todayDate, member.status);
+    await writeDeniedAttendance(member, todayDate, member.status, source, offlineQueued ? checkinTimestamp : null);
 
     return {
       httpStatus: 200,
@@ -102,7 +109,7 @@ const processCheckin = async (memberId) => {
   // ─── Step 7: Check expiry date (timezone-aware) ───────────
   if (isExpired(member.plan.expiryDate)) {
     // Write denied attendance
-    await writeDeniedAttendance(member, todayDate, 'expired');
+    await writeDeniedAttendance(member, todayDate, 'expired', source, offlineQueued ? checkinTimestamp : null);
 
     // Update member status to expired in MongoDB (async — don't delay response)
     setImmediate(async () => {
@@ -139,7 +146,7 @@ const processCheckin = async (memberId) => {
     const todayWeekday = getTodayWeekday();
     if (!member.plan.allowedDays || !member.plan.allowedDays.includes(todayWeekday)) {
       // Write denied attendance
-      await writeDeniedAttendance(member, todayDate, 'wrong-day');
+      await writeDeniedAttendance(member, todayDate, 'wrong-day', source, offlineQueued ? checkinTimestamp : null);
 
       const nextDay = getNextAllowedDay(member.plan.allowedDays || []);
       return {
@@ -158,7 +165,7 @@ const processCheckin = async (memberId) => {
     const attendance = await Attendance.create({
       memberId: member.memberId,
       memberRef: member._id,
-      checkedInAt: new Date(),
+      checkedInAt: checkinTimestamp,
       date: todayDate,
       status: 'granted',
       denyReason: null,
@@ -166,6 +173,8 @@ const processCheckin = async (memberId) => {
         type: member.plan.type,
         expiryDate: member.plan.expiryDate,
       },
+      source,
+      offlineQueuedAt: offlineQueued ? checkinTimestamp : null,
     });
 
     // ─── Step 10: Post-grant expiry warning (async) ───────
@@ -255,12 +264,12 @@ const processCheckin = async (memberId) => {
  * Write a denied attendance record.
  * All denied scans are recorded for audit trail.
  */
-const writeDeniedAttendance = async (member, todayDate, denyReason) => {
+const writeDeniedAttendance = async (member, todayDate, denyReason, source = 'live', offlineQueuedAt = null) => {
   try {
     await Attendance.create({
       memberId: member.memberId,
       memberRef: member._id,
-      checkedInAt: new Date(),
+      checkedInAt: offlineQueuedAt || new Date(),
       date: todayDate,
       status: 'denied',
       denyReason,
@@ -268,6 +277,8 @@ const writeDeniedAttendance = async (member, todayDate, denyReason) => {
         type: member.plan.type,
         expiryDate: member.plan.expiryDate,
       } : null,
+      source,
+      offlineQueuedAt,
     });
   } catch (err) {
     // If duplicate key error, a record already exists for today — that's fine
@@ -291,6 +302,7 @@ const getTodayLog = async (query) => {
 
   const [records, total] = await Promise.all([
     Attendance.find(filter)
+      .populate('memberRef', 'fullName plan.type')
       .sort({ checkedInAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -298,22 +310,13 @@ const getTodayLog = async (query) => {
     Attendance.countDocuments(filter),
   ]);
 
-  // Enrich with member names
-  const Member = require('../../models/Member');
-  const memberIds = [...new Set(records.map((r) => r.memberId))];
-  const members = await Member.find({ memberId: { $in: memberIds } })
-    .select('memberId fullName plan.type')
-    .lean();
-  const memberMap = {};
-  members.forEach((m) => { memberMap[m.memberId] = m; });
-
   const data = records.map((r) => ({
     memberId: r.memberId,
-    fullName: memberMap[r.memberId]?.fullName || 'Unknown',
+    fullName: r.memberRef?.fullName || 'Unknown',
     result: r.status,
     denyReason: r.denyReason,
     checkedInAt: r.checkedInAt,
-    planType: memberMap[r.memberId]?.plan?.type || null,
+    planType: r.memberRef?.plan?.type || null,
   }));
 
   return {
@@ -327,4 +330,16 @@ const getTodayLog = async (query) => {
   };
 };
 
-module.exports = { processCheckin, getTodayLog };
+/**
+ * Get count of offline-synced check-ins for today.
+ */
+const getOfflineSyncCount = async () => {
+  const todayDate = getTodayDateString();
+  const count = await Attendance.countDocuments({
+    date: todayDate,
+    source: 'offline-sync',
+  });
+  return count;
+};
+
+module.exports = { processCheckin, getTodayLog, getOfflineSyncCount };

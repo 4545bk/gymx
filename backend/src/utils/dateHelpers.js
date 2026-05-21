@@ -79,6 +79,15 @@ const getNextAllowedDay = (allowedDays) => {
   return weekdayName(nextDay);
 };
 
+/**
+ * Convert an arbitrary ISO timestamp to YYYY-MM-DD in gym timezone.
+ * Used for offline-queued check-ins where the scan time differs from the sync time.
+ */
+const getDateStringForTimestamp = (isoString) => {
+  const zonedDate = toZonedTime(new Date(isoString), GYM_TIMEZONE);
+  return format(zonedDate, 'yyyy-MM-dd');
+};
+
 module.exports = {
   nowLocal,
   getTodayDateString,
@@ -88,4 +97,5 @@ module.exports = {
   isExpired,
   weekdayName,
   getNextAllowedDay,
+  getDateStringForTimestamp,
 };

@@ -279,7 +279,10 @@ async function recordOfflineCheckin(memberId, fullName, checkedInAt) {
 
 /**
  * Sync pending offline check-ins to the server.
- * Returns { synced, failed } counts.
+ * Sends offlineQueued: true and originalScannedAt so the backend records the correct time.
+ * Treats HTTP 200 with result: 'duplicate' as a success (marks synced).
+ * Tracks retry attempts — after 5 failures, marks as failed and skips.
+ * Returns { synced, failed, skipped } counts.
  */
 export async function syncPendingCheckins(scannerKey, apiBase) {
   try {
@@ -293,14 +296,28 @@ export async function syncPendingCheckins(scannerKey, apiBase) {
       request.onerror = () => resolve([]);
     });
 
-    if (pending.length === 0) return { synced: 0, failed: 0 };
+    if (pending.length === 0) return { synced: 0, failed: 0, skipped: 0 };
 
     let synced = 0;
     let failed = 0;
+    let skipped = 0;
 
-    for (const checkin of pending) {
+    // Process in chronological order
+    const sorted = [...pending].sort((a, b) => {
+      const tA = new Date(a.checkedInAt || 0).getTime();
+      const tB = new Date(b.checkedInAt || 0).getTime();
+      return tA - tB;
+    });
+
+    for (const checkin of sorted) {
+      // Skip already-failed items (5+ attempts)
+      if (checkin.attempts >= 5 || checkin.failed) {
+        skipped++;
+        continue;
+      }
+
       try {
-        await fetch(`${apiBase}/checkin`, {
+        const res = await fetch(`${apiBase}/checkin`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -308,24 +325,42 @@ export async function syncPendingCheckins(scannerKey, apiBase) {
           },
           body: JSON.stringify({
             memberId: checkin.memberId,
-            offlineCheckinAt: checkin.checkedInAt, // Server uses this for timestamp
+            offlineQueued: true,
+            originalScannedAt: checkin.checkedInAt,
           }),
         });
-        synced++;
 
-        // Remove from pending
-        const delTx = database.transaction('pendingCheckins', 'readwrite');
-        delTx.objectStore('pendingCheckins').delete(checkin.id);
+        const data = await res.json();
+
+        // Treat both success and duplicate as "synced" — remove from queue
+        if (res.ok) {
+          synced++;
+          const delTx = database.transaction('pendingCheckins', 'readwrite');
+          delTx.objectStore('pendingCheckins').delete(checkin.id);
+        } else {
+          throw new Error(`Server returned ${res.status}`);
+        }
       } catch (err) {
         failed++;
+        // Increment attempts counter
+        const attempts = (checkin.attempts || 0) + 1;
+        const updateTx = database.transaction('pendingCheckins', 'readwrite');
+        updateTx.objectStore('pendingCheckins').put({
+          ...checkin,
+          attempts,
+          failed: attempts >= 5,
+        });
+        if (attempts >= 5) {
+          console.warn(`⚠️ Check-in for ${checkin.memberId} failed after 5 attempts, marking as failed`);
+        }
       }
     }
 
-    console.log(`✅ Sync complete: ${synced} synced, ${failed} failed`);
-    return { synced, failed };
+    console.log(`✅ Sync complete: ${synced} synced, ${failed} failed, ${skipped} skipped`);
+    return { synced, failed, skipped };
   } catch (err) {
     console.error('Sync error:', err);
-    return { synced: 0, failed: -1 };
+    return { synced: 0, failed: -1, skipped: 0 };
   }
 }
 

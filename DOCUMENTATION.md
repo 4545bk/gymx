@@ -37,6 +37,8 @@
 | **node-cron** | 3.0 | Background job scheduling |
 | **Helmet** | 7.1 | HTTP security headers |
 | **bcrypt** | 5.1 | Password hashing |
+| **Cloudinary** | ^2.10.0 | Image hosting & optimization CDN |
+
 
 ### Frontend
 | Technology | Version | Purpose |
@@ -121,9 +123,10 @@ Gymx/
 │       │   ├── auth.js            # JWT verification
 │       │   ├── roleGuard.js       # RBAC middleware
 │       │   ├── scannerAuth.js     # API key auth for QR scanner
+│       │   ├── branchFilter.js    # Multi-branch scoping middleware
 │       │   ├── validate.js        # Zod schema validation
 │       │   └── errorHandler.js    # Global error handler
-│       ├── models/                # 12 Mongoose schemas
+│       ├── models/                # 13 Mongoose schemas
 │       │   ├── Member.js          # Core member document
 │       │   ├── Staff.js           # Staff/user accounts
 │       │   ├── Attendance.js      # Check-in records
@@ -135,8 +138,9 @@ Gymx/
 │       │   ├── Alert.js           # System notifications
 │       │   ├── AuditLog.js        # Immutable business event log
 │       │   ├── Settings.js        # Singleton gym configuration
-│       │   └── MembershipPlan.js  # Dynamic membership plans
-│       ├── modules/               # 14 feature modules
+│       │   ├── MembershipPlan.js  # Dynamic membership plans
+│       │   └── Branch.js          # Branch schema (multi-location)
+│       ├── modules/               # 15 feature modules
 │       │   ├── auth/              # Login, JWT, refresh tokens
 │       │   ├── members/           # Member CRUD, QR, cards
 │       │   ├── checkin/           # QR scan, SSE stream
@@ -150,7 +154,8 @@ Gymx/
 │       │   ├── alerts/            # Notifications
 │       │   ├── reports/           # Analytics & summaries
 │       │   ├── audit/             # Audit log viewer
-│       │   └── settings/          # Config, plans, backup
+│       │   ├── settings/          # Config, plans, backup
+│       │   └── branches/          # Multi-location branches
 │       ├── jobs/                  # Background cron jobs
 │       │   ├── index.js           # Job scheduler
 │       │   ├── cachePreWarm.js    # Redis pre-warm
@@ -161,9 +166,13 @@ Gymx/
 │       │   ├── qrGenerator.js     # QR code generation
 │       │   ├── memberIdGenerator.js # MBR-XXXXXXXX IDs
 │       │   ├── dateHelpers.js     # Date utilities
-│       │   └── sseManager.js      # Server-Sent Events
+│       │   ├── sseManager.js      # Server-Sent Events
+│       │   └── cloudinary.js      # Cloudinary upload utility
 │       └── scripts/
-│           └── seed.js            # Database seed script
+│           ├── seed.js            # Database seed script
+│           ├── seedDemo.js        # Mock data seed script
+│           ├── migrateBranches.js # Branch data backfill migration
+│           └── migrateDues.js     # Dues status sync migration
 │
 └── frontend/
     ├── package.json
@@ -191,7 +200,8 @@ Gymx/
     │   └── ProtectedLayout.js     # Auth-wrapped layout
     └── lib/
         ├── api.js                 # Axios instance + interceptors
-        └── auth.js                # Auth context + hooks
+        ├── auth.js                # Auth context + hooks
+        └── branchContext.js       # Branch context + hook
 ```
 
 ---
@@ -214,6 +224,7 @@ Gymx/
 | `auditlogs` | Audit | Business event history | **Never** |
 | `settings` | Config | Singleton gym configuration | Yes |
 | `membershipplans` | Config | Dynamic membership plans | Yes |
+| `branches` | Config | Gym branches (multi-location) | Yes |
 
 ### 4.2 Schema Details
 
@@ -226,7 +237,7 @@ photoUrl:         String
 emergencyContact: { name, phone }
 qrCodeBase64:     String (select: false)
 plan: {
-  type:           'full-week' | '3-day'
+  type:           '3-day' | 'full-week' | 'weekend' | 'custom'
   allowedDays:    [Number] (ISO weekday 1-7)
   startDate:      Date
   expiryDate:     Date
@@ -244,19 +255,51 @@ billing: {
 }
 paymentSummary: { lastPaidDate, lastPaidAmount, outstandingBalance }
 assignedTrainerId: ObjectId → Staff
+card: {
+  issuedAt:       Date
+  printCount:     Number
+  lastPrintedBy:  ObjectId → Staff
+}
 registeredBy:     ObjectId → Staff
+branchId:         ObjectId → Branch (optional)
 ```
-**Indexes:** `memberId` (unique), `phone` (unique), `fullName` (text), `plan.expiryDate + status`, `assignedTrainerId + status`, `paymentStatus + status`
+**Indexes:** `memberId` (unique), `phone` (unique), `fullName` (text), `plan.expiryDate + status`, `assignedTrainerId + status`, `paymentStatus + status`, `branchId + status`
 
 #### Staff (`staffs`)
 ```
-fullName:     String
-username:     String (unique)
-passwordHash: String (bcrypt, select: false)
-role:         'owner' | 'receptionist' | 'trainer'
-phone:        String
-status:       'active' | 'inactive'
+fullName:         String
+phone:            String
+email:            String (unique)
+passwordHash:     String (bcrypt, select: false)
+refreshTokenHash: String (select: false)
+role:             'owner' | 'receptionist' | 'trainer'
+trainerProfile: {
+  specialization: String
+  schedule:       { mon, tue, wed, thu, fri, sat, sun }
+  assignedMemberCount: Number
+}
+salary: {
+  amount:         Number (cents)
+  currency:       String (default: 'ETB')
+  paymentDay:     Number
+}
+status:           'active' | 'inactive'
+assignedBranches: [ObjectId → Branch]
 ```
+**Indexes:** `email` (unique), `role + status`
+
+#### Attendance (`attendances`) — APPEND-ONLY
+```
+memberId:         String (matches Member.memberId)
+memberRef:        ObjectId → Member
+checkedInAt:      Date
+date:             String (YYYY-MM-DD, UTC+3 local)
+status:           'granted' | 'denied'
+denyReason:       'expired' | 'suspended' | 'frozen' | 'wrong-day' | 'duplicate' | 'unknown-id' | null
+planSnapshot:     { type, expiryDate }
+branchId:         ObjectId → Branch (optional)
+```
+**Indexes:** `memberId + date` (unique compound index to prevent duplicate daily check-ins), `memberId + checkedInAt`, `date + checkedInAt`, `status + date`, `branchId + status`
 
 #### Payment (`payments`) — IMMUTABLE
 ```
@@ -265,7 +308,8 @@ direction:       'in' | 'out'
 memberRef:       ObjectId → Member
 memberName:      String (snapshot)
 planType:        String (snapshot)
-expenseCategory: 'salary' | 'equipment' | 'utilities' | 'other'
+expenseCategory: 'salary' | 'equipment' | 'utilities' | 'other' | null
+staffRef:        ObjectId → Staff (salary payments)
 description:     String
 amount:          Number (cents)
 currency:        'ETB'
@@ -275,14 +319,171 @@ voided:          Boolean
 reversalOf:      ObjectId → Payment
 recordedBy:      ObjectId → Staff
 recordedAt:      Date
+branchId:        ObjectId → Branch (optional)
 ```
+**Indexes:** `memberRef + recordedAt`, `period.year + period.month + direction`, `direction + expenseCategory + recordedAt`, `recordedAt + direction`
 
 #### Product (`products`)
 ```
-name:           String
-sku:            String (unique, auto-generated)
-description:    String
-category:       'supplements' | 'drinks' | 'accessories' | 'merchandise' | 'other'
+name:             String
+sku:              String (unique, auto-generated)
+description:      String
+category:         'supplements' | 'drinks' | 'accessories' | 'merchandise' | 'other'
+costPrice:        Number (cents)
+sellingPrice:     Number (cents)
+stock:            Number
+lowStockThreshold: Number
+status:           'active' | 'archived'
+isLowStock:       Boolean (virtual)
+```
+
+#### Sale (`sales`)
+```
+saleNumber:       String (SLE-YYYYMMDD-XXXX, unique)
+items: [{
+  productRef:     ObjectId → Product
+  productName:    String (snapshot)
+  sku:            String (snapshot)
+  quantity:       Number
+  unitPrice:      Number (cents)
+  lineTotal:      Number (cents)
+}]
+subtotal:         Number (cents)
+discount:         Number (cents)
+total:            Number (cents)
+paymentMethod:    'cash' | 'bank-transfer' | 'other'
+soldBy:           ObjectId → Staff
+soldByName:       String (snapshot)
+saleDate:         Date
+voided:           Boolean
+voidedAt:         Date
+voidedBy:         ObjectId → Staff
+voidReason:       String
+notes:            String
+branchId:         ObjectId → Branch (optional)
+```
+**Indexes:** `saleDate`, `soldBy + saleDate`, `items.productRef`
+
+#### InventoryMovement (`inventorymovements`) — APPEND-ONLY
+```
+productRef:       ObjectId → Product
+productName:      String (snapshot)
+sku:              String (snapshot)
+type:             'initial' | 'restock' | 'sale' | 'correction' | 'return' | 'damaged' | 'archived'
+quantityChange:   Number (positive = added, negative = removed)
+stockBefore:      Number
+stockAfter:       Number
+reason:           String
+saleRef:          ObjectId → Sale (optional)
+performedBy:      ObjectId → Staff
+performedByName:  String (snapshot)
+createdAt:        Date
+updatedAt:        Date
+```
+**Indexes:** `productRef + createdAt`, `type + createdAt`
+
+#### Inventory (`inventoryitems`)
+```
+name:             String
+category:         'Cardio' | 'Strength' | 'Free weights' | 'Accessories' | 'Other'
+brand:            String
+serialNumber:     String
+quantity:         Number
+condition:        'good' | 'fair' | 'needs-repair' | 'retired'
+purchaseInfo: {
+  date:           Date
+  cost:           Number (cents)
+  currency:       String (default: 'ETB')
+  vendor:         String
+}
+maintenance: {
+  lastServiceDate: Date
+  nextServiceDate: Date
+  intervalMonths:  Number
+  notes:           String
+}
+createdBy:        ObjectId → Staff
+createdAt:        Date
+updatedAt:        Date
+```
+**Indexes:** `maintenance.nextServiceDate + condition`, `category + condition`
+
+#### Alert (`alerts`)
+```
+type:             'membership-expiring' | 'membership-expired' | 'payment-overdue' | 'maintenance-due' | 'manual'
+severity:         'info' | 'warning' | 'critical'
+subjectType:      'member' | 'equipment' | 'staff'
+subjectRef:       ObjectId (polymorphic ref)
+subjectName:      String (snapshot)
+message:          String
+visibleTo:        ['owner' | 'receptionist']
+isRead:           Boolean
+readBy:           [ObjectId → Staff]
+createdAt:        Date
+expiresAt:        Date (TTL field)
+```
+**Indexes:** `expiresAt` (TTL index), `visibleTo + isRead + createdAt`
+
+#### AuditLog (`auditlogs`) — IMMUTABLE
+```
+action:          Enum (PRODUCT_CREATED, SALE_COMPLETED, SETTINGS_UPDATED, BACKUP_CREATED, etc.)
+entity:          'product' | 'sale' | 'settings' | 'plan' | 'backup'
+entityRef:       ObjectId
+entityName:      String
+changes:         { before, after }
+maxlength:       Mixed
+performedBy:     ObjectId → Staff
+performedByName: String
+```
+
+#### Settings (`settings`) — SINGLETON
+```
+gymId:                    'default' (unique)
+gymName:                  String
+tagline:                  String
+logoUrl:                  String
+phone:                    String
+email:                    String
+address:                  String
+currency:                 'ETB'
+timezone:                 'Africa/Addis_Ababa'
+receiptFooter:            String
+receiptShowQR:            Boolean
+cardShowLogo:             Boolean
+defaultLowStockThreshold: Number
+dashboardRefreshSeconds:  Number
+lastBackupAt:             Date
+lastBackupBy:             String
+```
+
+#### MembershipPlan (`membershipplans`)
+```
+name:            String
+slug:            String (unique)
+type:            'full-week' | '3-day' | 'weekend' | 'custom'
+durationMonths:  Number
+allowedDays:     [Number]
+price:           Number (cents)
+status:          'active' | 'inactive'
+sortOrder:       Number
+createdBy:       ObjectId → Staff
+```
+
+#### Branch (`branches`)
+```
+name:            String
+address:         String
+phone:           String
+gymId:           String
+isActive:        Boolean
+isHeadquarters:  Boolean
+scannerApiKey:   String (unique, auto-generated token)
+createdAt:       Date
+updatedAt:       Date
+```
+**Indexes:** `gymId + isActive`
+
+---ssories' | 'merchandise' | 'other'
 costPrice:      Number (cents)
 sellingPrice:   Number (cents)
 stock:          Number
@@ -490,6 +691,15 @@ Base URL: `/api/v1`
 | POST | `/settings/restore/validate` | O | Validate backup file |
 | POST | `/settings/restore` | O | Restore from backup |
 
+### Branches (5 endpoints)
+| Method | Path | Roles | Description |
+|---|---|---|---|
+| GET | `/branches/count` | All | Count active branches |
+| GET | `/branches` | O | List all branches (supports ?active=true) |
+| POST | `/branches` | O | Create a new branch |
+| PUT | `/branches/:id` | O | Update branch details |
+| POST | `/branches/:id/regenerate-key` | O | Regenerate branch scanner API key |
+
 ### Other
 | Method | Path | Roles | Description |
 |---|---|---|---|
@@ -500,6 +710,8 @@ Base URL: `/api/v1`
 | POST | `/inventory` | O | Add equipment |
 | GET | `/alerts` | O, R | List alerts |
 | GET | `/alerts/count` | O, R | Unread count |
+| PATCH | `/alerts/:alertId/read` | O, R | Mark alert as read |
+| DELETE | `/alerts/:alertId` | O | Dismiss alert |
 | GET | `/reports/members` | O, R | Member stats |
 | GET | `/reports/attendance` | O, R | Attendance report |
 | GET | `/reports/revenue` | O | Revenue report |
@@ -540,11 +752,14 @@ Base URL: `/api/v1`
 ### 8.1 Member Management
 - Registration with auto-generated MBR-XXXXXXXX IDs
 - QR code generation for each member
-- Printable PDF membership cards with QR, photo, plan details
+- Printable PDF membership cards with QR, photo, and plan details (tracks print metadata including `issuedAt`, `printCount`, and `lastPrintedBy`)
 - Plan types: full-week, 3-day, weekend, custom
-- Status management: active → suspended/frozen → reactivated
+- Status management: switching status between `active`, `suspended`, `frozen`, and `expired`
+- Soft-deleting members (sets status to `expired` and retains their billing and visit logs)
 - Plan renewal with billing reset
+- Profile editing (updates personal details and assigns trainers)
 - Text search by name, phone prefix search
+- Auto-uploads base64 member photos to Cloudinary (if configured)
 
 ### 8.2 QR Check-In System
 - Hardware scanner sends POST with memberId via API key auth
@@ -596,6 +811,24 @@ Base URL: `/api/v1`
 - Captures before/after state for every change
 - Owner-only read access
 
+### 8.9 Multi-Location / Branch Support
+- GymX supports multi-location setups with individual branches.
+- **Branch Schema**: Scopes data using an optional `branchId` reference on `members`, `payments`, `sales`, and `attendances` to maintain full backwards compatibility for single-branch gyms.
+- **Branch Scope Middleware**: The `branchFilter` middleware inspects the `x-branch-id` request header. Owners see all branches unless filtered, whereas other staff are automatically scoped to their `assignedBranches`.
+- **Branch QR Scanning**: Each branch maintains a unique `scannerApiKey` for its dedicated physical entrance door scanner, auto-assigning check-ins to that specific branch.
+- **Branch Context**: The frontend `BranchProvider` keeps track of the active branch in `localStorage`, appending it to headers for all subsequent API requests.
+
+### 8.10 Cloudinary CDN Integration
+- GymX transitions from storing base64-encoded image files (like member photos and gym logos) directly in MongoDB blobs to hosting them on Cloudinary's CDN.
+- **Automatic Upload**: If `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` are set in the backend environment variables, the system uploads base64 data URIs to Cloudinary on member/settings updates and saves the secure CDN URLs instead.
+- **PDF Generation Support**: The PDF engine retrieves and renders images directly from Cloudinary URLs rather than handling raw base64 data, minimizing latency and memory overhead.
+
+### 8.11 Dark / Light Theme Toggle
+- A premium, persistent theme switcher enables users to toggle between dark and light modes.
+- **Zero Flash On Load**: An inline script in the HTML layout reads the saved theme from `localStorage` (`gymx-theme`) and immediately sets the `data-theme` attribute on the root element before rendering, preventing any flash of incorrect theme style.
+- **CSS Variable styling**: High-fidelity dark variables and glassmorphism styling are applied using the `[data-theme="dark"]` selector in the `globals.css` design system.
+
+
 ---
 
 ## 9. Background Jobs
@@ -625,6 +858,11 @@ REDIS_URL=redis://localhost:6379
 JWT_SECRET=<min 32 chars>
 JWT_REFRESH_SECRET=<min 32 chars>
 SCANNER_API_KEY=<api key for QR scanner>
+
+# Cloudinary (Optional, enabled automatically when variables are present)
+CLOUDINARY_CLOUD_NAME=<your cloudinary cloud name>
+CLOUDINARY_API_KEY=<your cloudinary api key>
+CLOUDINARY_API_SECRET=<your cloudinary api secret>
 
 # API
 NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
@@ -696,6 +934,8 @@ All monetary values are stored in **cents** (smallest currency unit).
 | **Denormalization** | billing/paymentSummary embedded on Member |
 | **Atomic Stock** | MongoDB `$inc` with `$gte` guard on Product.stock |
 | **Background Jobs** | node-cron for expiry sync, overdue detection |
+| **Multi-Branch Scoping** | `branchFilter` middleware scoping all database queries by `branchId` |
+| **Cloud Storage CDN** | `cloudinary.js` uploading logo/photos to offload MongoDB binary storage |
 
 ---
 

@@ -7,11 +7,15 @@ const sseManager = require('../../utils/sseManager');
 /**
  * POST /api/v1/checkin — Scanner calls this.
  * No JWT middleware — only scanner API key (handled by scannerAuth middleware).
+ * Accepts optional offline-queue fields: offlineQueued, originalScannedAt.
  */
 const checkin = async (req, res, next) => {
   try {
-    const { memberId } = req.body;
-    const result = await checkinService.processCheckin(memberId);
+    const { memberId, offlineQueued, originalScannedAt } = req.body;
+    const result = await checkinService.processCheckin(memberId, {
+      offlineQueued: !!offlineQueued,
+      originalScannedAt: originalScannedAt || null,
+    });
 
     res.status(result.httpStatus).json({
       success: true,
@@ -57,4 +61,16 @@ const today = async (req, res, next) => {
   }
 };
 
-module.exports = { checkin, stream, today };
+/**
+ * GET /api/v1/checkin/pending-count — Count of offline-synced check-ins today.
+ */
+const pendingCount = async (req, res, next) => {
+  try {
+    const count = await checkinService.getOfflineSyncCount();
+    res.status(200).json({ success: true, data: { count } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { checkin, stream, today, pendingCount };

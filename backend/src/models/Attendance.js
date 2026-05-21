@@ -53,6 +53,16 @@ const attendanceSchema = new mongoose.Schema({
   // Snapshot of member's plan at time of scan (audit trail)
   planSnapshot: { type: planSnapshotSchema, default: null },
 
+  // Source: how was this record created?
+  source: {
+    type: String,
+    enum: ['live', 'offline-sync'],
+    default: 'live',
+  },
+
+  // Original device scan timestamp (only set for offline-sync records)
+  offlineQueuedAt: { type: Date, default: null },
+
   // Multi-branch support (optional)
   branchId: {
     type: mongoose.Schema.Types.ObjectId,
