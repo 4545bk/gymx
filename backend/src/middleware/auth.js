@@ -8,9 +8,16 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/env');
 
 const auth = (req, res, next) => {
+  let token = null;
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
+    token = req.query.token;
+  }
+
+  if (!token) {
     return res.status(401).json({
       success: false,
       error: {
@@ -19,8 +26,6 @@ const auth = (req, res, next) => {
       },
     });
   }
-
-  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);

@@ -2,14 +2,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import ProtectedLayout from '@/components/ProtectedLayout';
 import api from '@/lib/api';
-import { Save, Plus, Trash2, Download, Upload, Shield, AlertTriangle } from 'lucide-react';
+import { Save, Plus, Trash2, Download, Upload, Shield, AlertTriangle, Calendar, MapPin, Copy, RefreshCw } from 'lucide-react';
+import Skeleton from '@/components/ui/Skeleton';
+import { getDateFormat, setDateFormat } from '@/lib/ethiopianDate';
+import { fmtETB } from '@/lib/currency';
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState('general'); // general | plans | backup
+  const [tab, setTab] = useState('general'); // general | plans | branches | backup
 
   const tabs = [
     { key: 'general', label: 'General' },
     { key: 'plans', label: 'Membership Plans' },
+    { key: 'branches', label: 'Branches' },
     { key: 'backup', label: 'Backup & Restore' },
   ];
 
@@ -24,6 +28,7 @@ export default function SettingsPage() {
 
       {tab === 'general' && <GeneralSettings />}
       {tab === 'plans' && <PlansSettings />}
+      {tab === 'branches' && <BranchesSettings />}
       {tab === 'backup' && <BackupSettings />}
     </ProtectedLayout>
   );
@@ -53,7 +58,7 @@ function GeneralSettings() {
     finally { setSaving(false); }
   };
 
-  if (loading) return <div className="loading-page"><div className="spinner spinner-lg"></div></div>;
+  if (loading) return <div style={{ maxWidth: 700 }}><Skeleton height={40} width={200} style={{ marginBottom: 16 }} /><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{[...Array(4)].map((_, i) => <Skeleton key={i} height={44} />)}</div><Skeleton height={44} style={{ marginTop: 12 }} /><Skeleton height={44} style={{ marginTop: 12 }} /></div>;
   if (!settings) return <div className="empty-state"><p>Failed to load settings</p></div>;
 
   const update = (field, value) => setSettings(prev => ({ ...prev, [field]: value }));
@@ -136,6 +141,17 @@ function GeneralSettings() {
         <div className="form-group"><label className="form-label">Timezone</label><input className="form-input" value={settings.timezone || ''} onChange={(e) => update('timezone', e.target.value)} /></div>
       </div>
 
+      {/* Date Display Preference */}
+      <div className="form-group" style={{ marginTop: '0.75rem' }}>
+        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Calendar size={14} /> Date Display
+        </label>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+          Choose how dates appear throughout the app. Ethiopian calendar (Ge'ez) is the standard in Ethiopia.
+        </p>
+        <DateFormatSelector />
+      </div>
+
       <h3 style={{ marginTop: '1.5rem', marginBottom: '1.25rem' }}>Receipts & Cards</h3>
       <div className="form-group"><label className="form-label">Receipt Footer Message</label><input className="form-input" value={settings.receiptFooter || ''} onChange={(e) => update('receiptFooter', e.target.value)} /></div>
       <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem' }}>
@@ -164,6 +180,63 @@ function GeneralSettings() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// DATE FORMAT SELECTOR
+// ═══════════════════════════════════════════════════════════
+function DateFormatSelector() {
+  const [format, setFormat] = useState('both');
+
+  useEffect(() => {
+    setFormat(getDateFormat());
+  }, []);
+
+  const handleChange = (val) => {
+    setFormat(val);
+    setDateFormat(val);
+  };
+
+  const options = [
+    { value: 'both', label: 'Ethiopian + Gregorian', desc: 'Shows both calendars', example: '11 ግንቦት 2018 (May 19, 2026)' },
+    { value: 'ethiopian', label: 'Ethiopian Only', desc: 'Ge\'ez calendar only', example: '11 ግንቦት 2018' },
+    { value: 'gregorian', label: 'Gregorian Only', desc: 'Standard calendar', example: 'May 19, 2026' },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      {options.map(opt => (
+        <label key={opt.value} style={{
+          display: 'flex', alignItems: 'center', gap: '0.75rem',
+          padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
+          border: `2px solid ${format === opt.value ? 'var(--accent-primary)' : 'var(--border)'}`,
+          background: format === opt.value ? 'var(--info-bg)' : 'var(--bg-elevated)',
+          cursor: 'pointer', transition: 'all 150ms ease',
+        }}
+        onMouseEnter={(e) => { if (format !== opt.value) e.currentTarget.style.borderColor = 'var(--border-hover)'; }}
+        onMouseLeave={(e) => { if (format !== opt.value) e.currentTarget.style.borderColor = 'var(--border)'; }}
+        >
+          <input
+            type="radio" name="dateFormat"
+            checked={format === opt.value}
+            onChange={() => handleChange(opt.value)}
+            style={{ accentColor: 'var(--accent-primary)' }}
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{opt.label}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{opt.desc}</div>
+          </div>
+          <div style={{
+            fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace',
+            padding: '0.25rem 0.5rem', background: 'var(--bg-card)', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border)', whiteSpace: 'nowrap',
+          }}>
+            {opt.example}
+          </div>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
 // MEMBERSHIP PLANS TAB
 // ═══════════════════════════════════════════════════════════
 function PlansSettings() {
@@ -182,7 +255,7 @@ function PlansSettings() {
 
   useEffect(() => { fetchPlans(); }, [fetchPlans]);
 
-  const formatPrice = (cents) => `${(cents / 100).toLocaleString()} ETB`;
+  const formatPrice = (cents) => fmtETB(cents);
   const dayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const toggleStatus = async (e, plan) => {
@@ -193,7 +266,7 @@ function PlansSettings() {
     } catch (err) { alert('Failed to update plan'); }
   };
 
-  if (loading) return <div className="loading-page"><div className="spinner spinner-lg"></div></div>;
+  if (loading) return <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{[...Array(3)].map((_, i) => <Skeleton key={i} height={72} borderRadius="var(--radius-md)" />)}</div>;
 
   return (
     <div>
@@ -505,3 +578,184 @@ function BackupSettings() {
     </div>
   );
 }
+
+// ═══════════════════════════════════════════════════════════
+// BRANCHES TAB — Multi-location management
+// ═══════════════════════════════════════════════════════════
+function BranchesSettings() {
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editBranch, setEditBranch] = useState(null);
+  const [form, setForm] = useState({ name: '', address: '', phone: '', isHeadquarters: false });
+  const [saving, setSaving] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(null);
+
+  const fetchBranches = useCallback(async () => {
+    try {
+      const { data } = await api.get('/branches');
+      setBranches(data.data || []);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchBranches(); }, [fetchBranches]);
+
+  const handleAdd = async (e) => {
+    e.preventDefault(); setSaving(true);
+    try {
+      await api.post('/branches', form);
+      setShowAdd(false);
+      setForm({ name: '', address: '', phone: '', isHeadquarters: false });
+      fetchBranches();
+    } catch (err) { alert(err.response?.data?.error?.message || 'Failed to add branch'); }
+    finally { setSaving(false); }
+  };
+
+  const handleUpdate = async (id, updates) => {
+    try {
+      await api.put(`/branches/${id}`, updates);
+      fetchBranches();
+      setEditBranch(null);
+    } catch (err) { alert('Failed to update branch'); }
+  };
+
+  const handleRegenKey = async (id) => {
+    if (!confirm('Regenerate scanner key? The old key will stop working immediately.')) return;
+    try {
+      await api.post(`/branches/${id}/regenerate-key`);
+      fetchBranches();
+    } catch (err) { alert('Failed to regenerate key'); }
+  };
+
+  const copyKey = (key) => {
+    navigator.clipboard.writeText(key);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  if (loading) return <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{[...Array(2)].map((_, i) => <Skeleton key={i} height={100} borderRadius="var(--radius-md)" />)}</div>;
+
+  return (
+    <div style={{ maxWidth: '700px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            Manage gym locations. Each branch gets its own scanner key for check-ins.
+          </p>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={() => setShowAdd(true)}>
+          <Plus size={14} /> Add Branch
+        </button>
+      </div>
+
+      {/* Add Branch Form */}
+      {showAdd && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '1.25rem', marginBottom: '1rem' }}>
+          <h4 style={{ marginBottom: '0.75rem' }}>New Branch</h4>
+          <form onSubmit={handleAdd}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="form-group"><label className="form-label">Branch Name *</label><input className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="e.g. Bole Branch" /></div>
+              <div className="form-group"><label className="form-label">Phone</label><input className="form-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+251..." /></div>
+            </div>
+            <div className="form-group"><label className="form-label">Address</label><input className="form-input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Street address" /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '1rem', fontSize: '0.85rem' }}>
+              <input type="checkbox" checked={form.isHeadquarters} onChange={(e) => setForm({ ...form, isHeadquarters: e.target.checked })} /> Set as headquarters
+            </label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>{saving ? 'Adding...' : 'Add Branch'}</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowAdd(false)}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Branch List */}
+      <div style={{ display: 'grid', gap: '0.75rem' }}>
+        {branches.map(branch => (
+          <div key={branch._id} style={{
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)', padding: '1.25rem',
+            opacity: branch.isActive ? 1 : 0.5,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                  <MapPin size={16} style={{ color: 'var(--accent-primary)' }} />
+                  <span style={{ fontWeight: 700, fontSize: '1rem' }}>{branch.name}</span>
+                  {branch.isHeadquarters && (
+                    <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: 99, background: 'var(--accent-primary)', color: '#fff', fontWeight: 600 }}>HQ</span>
+                  )}
+                  <span className={`badge ${branch.isActive ? 'badge-active' : 'badge-expired'}`}>{branch.isActive ? 'Active' : 'Inactive'}</span>
+                </div>
+                {branch.address && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{branch.address}</div>}
+                {branch.phone && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{branch.phone}</div>}
+              </div>
+              <div style={{ display: 'flex', gap: '0.375rem' }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditBranch(editBranch === branch._id ? null : branch._id)} title="Edit">✏️</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => handleUpdate(branch._id, { isActive: !branch.isActive })} title={branch.isActive ? 'Deactivate' : 'Activate'}>
+                  {branch.isActive ? '🔴' : '🟢'}
+                </button>
+              </div>
+            </div>
+
+            {/* Scanner API Key */}
+            <div style={{
+              background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)',
+              padding: '0.75rem', border: '1px solid var(--border)',
+            }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Scanner API Key
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <code style={{
+                  flex: 1, fontSize: '0.75rem', padding: '4px 8px',
+                  background: 'var(--bg-card)', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border)', color: 'var(--text-secondary)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {branch.scannerApiKey || 'Not generated'}
+                </code>
+                <button className="btn btn-ghost btn-sm" onClick={() => copyKey(branch.scannerApiKey)} title="Copy" style={{ flexShrink: 0 }}>
+                  {copiedKey === branch.scannerApiKey ? '✓' : <Copy size={14} />}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => handleRegenKey(branch._id)} title="Regenerate" style={{ flexShrink: 0 }}>
+                  <RefreshCw size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Inline Edit */}
+            {editBranch === branch._id && (
+              <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <div className="form-group"><label className="form-label" style={{ fontSize: '0.7rem' }}>Name</label><input className="form-input" defaultValue={branch.name} id={`edit-name-${branch._id}`} /></div>
+                  <div className="form-group"><label className="form-label" style={{ fontSize: '0.7rem' }}>Phone</label><input className="form-input" defaultValue={branch.phone} id={`edit-phone-${branch._id}`} /></div>
+                </div>
+                <div className="form-group"><label className="form-label" style={{ fontSize: '0.7rem' }}>Address</label><input className="form-input" defaultValue={branch.address} id={`edit-addr-${branch._id}`} /></div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => {
+                    handleUpdate(branch._id, {
+                      name: document.getElementById(`edit-name-${branch._id}`).value,
+                      phone: document.getElementById(`edit-phone-${branch._id}`).value,
+                      address: document.getElementById(`edit-addr-${branch._id}`).value,
+                    });
+                  }}>Save</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setEditBranch(null)}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        {branches.length === 0 && (
+          <div className="empty-state" style={{ padding: '2rem' }}>
+            <MapPin size={32} style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }} />
+            <p>No branches configured</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Add your first branch to enable multi-location support.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+

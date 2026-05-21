@@ -78,6 +78,13 @@ const paymentSchema = new mongoose.Schema({
     required: true,
   },
   recordedAt: { type: Date, required: true, default: Date.now },
+
+  // Multi-branch support (optional)
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    default: null,
+  },
 }, {
   timestamps: false, // We use recordedAt instead
 });

@@ -9,7 +9,7 @@
     "start": "next start -p 3000"
   },
   "dependencies": {
-    "next": "^14.2.0",
+    "next": "14.2.35",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "axios": "^1.7.0",
@@ -19,6 +19,6 @@
   },
   "devDependencies": {
     "eslint": "^8.56.0",
-    "eslint-config-next": "^14.2.0"
+    "eslint-config-next": "14.2.35"
   }
 }

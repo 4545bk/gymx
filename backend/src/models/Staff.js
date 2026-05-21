@@ -62,6 +62,13 @@ const staffSchema = new mongoose.Schema({
     enum: ['active', 'inactive'],
     default: 'active',
   },
+
+  // Multi-branch support — branches this staff member can access
+  // Empty array = all branches (owner default). Populated = scoped access.
+  assignedBranches: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+  }],
 }, {
   timestamps: true,
 });

@@ -104,6 +104,13 @@ const saleSchema = new mongoose.Schema({
     ref: 'Staff',
   },
   voidReason: String,
+
+  // Multi-branch support (optional)
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    default: null,
+  },
 }, {
   timestamps: true,
 });

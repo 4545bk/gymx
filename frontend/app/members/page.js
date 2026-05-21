@@ -5,18 +5,29 @@ import ProtectedLayout from '@/components/ProtectedLayout';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
 import api from '@/lib/api';
-import { Plus, Search, Filter, Eye, QrCode, UserX, CreditCard, RotateCw, Camera, MoreVertical, Edit3, Trash2, ShieldAlert, ShieldCheck, Snowflake, Ban, AlertTriangle, DollarSign, Banknote } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Search, Eye, QrCode, UserX, CreditCard, RotateCw, Camera, MoreVertical, Edit3, Trash2, ShieldAlert, ShieldCheck, Ban, Snowflake, DollarSign, Banknote, Download, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
+import { formatExpiry, formatBilingual } from '@/lib/ethiopianDate';
+import { fmtETB } from '@/lib/currency';
+import { useBranch } from '@/lib/branchContext';
+
+const PAYMENT_VARIANT = { paid: 'success', partial: 'warning', unpaid: 'danger', overdue: 'danger' };
+const STATUS_VARIANT = { active: 'success', expired: 'danger', suspended: 'warning', frozen: 'info' };
 
 export default function MembersPage() {
   const { staff } = useAuth();
   const toast = useToast();
+  const { t } = useI18n();
   const [members, setMembers] = useState([]);
   const [pagination, setPagination] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [planFilter, setPlanFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
   const [showModal, setShowModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [showQR, setShowQR] = useState(null);
@@ -29,6 +40,27 @@ export default function MembersPage() {
   const [showEditModal, setShowEditModal] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(null);
   const menuRef = useRef(null);
+  const sentinelRef = useRef(null);
+
+  // Prefetch next page when sentinel is in view
+  useEffect(() => {
+    if (!sentinelRef.current || page >= pagination.totalPages) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        api.get('/members', {
+          params: { page: page + 1, limit, search: debouncedSearch, status: statusFilter, plan: planFilter }
+        }).catch(() => {});
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [page, limit, debouncedSearch, statusFilter, planFilter, pagination.totalPages]);
+
+  // Debounce search (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -46,8 +78,8 @@ export default function MembersPage() {
   const fetchMembers = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page, limit: 20 });
-      if (search) params.append('search', search);
+      const params = new URLSearchParams({ page, limit });
+      if (debouncedSearch) params.append('search', debouncedSearch);
       if (statusFilter) params.append('status', statusFilter);
       if (planFilter) params.append('plan', planFilter);
 
@@ -59,7 +91,7 @@ export default function MembersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, planFilter]);
+  }, [page, limit, debouncedSearch, statusFilter, planFilter]);
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
@@ -124,206 +156,278 @@ export default function MembersPage() {
     return map[status] || '';
   };
 
+  const getInitials = (name) => name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
+
+  function LazyMemberPhoto({ src, fullName }) {
+    const [isVisible, setIsVisible] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+      const observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      }, { rootMargin: '100px' });
+      if (ref.current) observer.observe(ref.current);
+      return () => observer.disconnect();
+    }, []);
+    return (
+      <div ref={ref} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {isVisible && src ? (
+          <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          getInitials(fullName)
+        )}
+      </div>
+    );
+  }
+  const startItem = ((pagination.page || 1) - 1) * limit + 1;
+  const endItem = Math.min(startItem + limit - 1, pagination.total || 0);
+
   return (
-    <ProtectedLayout
-      title="Members"
-      actions={
-        (staff?.role === 'owner' || staff?.role === 'receptionist') && (
-          <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ borderRadius: 'var(--radius-lg)' }}>
-            <Plus size={16} /> Add Member
-          </button>
-        )
-      }
-    >
-      {/* Filters */}
-      <div style={{
-        display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap',
-        alignItems: 'center',
-      }}>
-        <div className="topbar-search" style={{ flex: 1, minWidth: '250px' }}>
-          <Search size={16} style={{ color: 'var(--text-muted)' }} />
+    <ProtectedLayout>
+      {/* ─── Page Header ──────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-semibold)', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{t('members.title')}</h1>
+          {pagination.total > 0 && (
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-medium)', color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: '2px 10px', borderRadius: 9999 }}>
+              {pagination.total}
+            </span>
+          )}
+        </div>
+        {(staff?.role === 'owner' || staff?.role === 'receptionist') && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Link href="/members/import" style={{ textDecoration: 'none' }}>
+              <button className="btn btn-secondary" style={{ borderRadius: 'var(--radius-md)' }}>
+                <Upload size={16} /> Import
+              </button>
+            </Link>
+            <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ borderRadius: 'var(--radius-md)' }}>
+              <Plus size={16} /> {t('members.addMember')}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Search & Filter ──────────────────────────── */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{
+          flex: 1, minWidth: 240, display: 'flex', alignItems: 'center', gap: 8,
+          background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
+          padding: '0 12px', height: 36,
+        }}>
+          <Search size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <input
-            placeholder="Search by name, phone, or member ID..."
+            placeholder={t('members.search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(e); }}
+            style={{ border: 'none', outline: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)', width: '100%' }}
           />
         </div>
-
-        <select className="form-select" value={planFilter} onChange={(e) => { setPlanFilter(e.target.value); setPage(1); }} style={{ width: '150px' }}>
-          <option value="">All Plans</option>
+        <select className="form-select" value={planFilter} onChange={(e) => { setPlanFilter(e.target.value); setPage(1); }}
+          style={{ width: 140, height: 36, fontSize: 'var(--text-sm)', borderRadius: 'var(--radius-md)' }}>
+          <option value="">{t('common.allPlans')}</option>
           {[...new Map(availablePlans.map(p => [p.type, p])).values()].map(p => (
             <option key={p.type} value={p.type}>{p.name || p.type}</option>
           ))}
         </select>
       </div>
 
-      {/* Status Tabs */}
+      {/* ─── Status Filter Pills ──────────────────────── */}
       <div className="tab-filters">
-        {[{ v: '', l: 'All' }, { v: 'active', l: 'Active' }, { v: 'expired', l: 'Expired' }, { v: 'suspended', l: 'Suspended' }, { v: 'frozen', l: 'Frozen' }].map(t => (
-          <button key={t.v} className={`tab-filter ${statusFilter === t.v ? 'active' : ''}`} onClick={() => { setStatusFilter(t.v); setPage(1); }}>{t.l}</button>
+        {[{ v: '', l: t('members.filterAll') }, { v: 'active', l: t('members.filterActive') }, { v: 'expired', l: t('members.filterExpired') }, { v: 'suspended', l: t('members.filterSuspended') }, { v: 'frozen', l: t('members.filterFrozen') }].map(f => (
+          <button key={f.v} className={`tab-filter ${statusFilter === f.v ? 'active' : ''}`} onClick={() => { setStatusFilter(f.v); setPage(1); }}>{f.l}</button>
         ))}
       </div>
 
-      {/* Table */}
+      {/* ─── Member List ──────────────────────────────── */}
       {loading ? (
-        <div className="loading-page" style={{ minHeight: '40vh' }}>
-          <div className="spinner spinner-lg"></div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="skeleton" style={{ height: 64, borderRadius: 'var(--radius-md)' }} />
+          ))}
         </div>
-      ) : (
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Member</th>
-                <th>Phone</th>
-                <th>Plan</th>
-                <th>Status</th>
-                <th>Payment</th>
-                <th>Days Left</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.length > 0 ? members.map((m) => (
-                <tr key={m.memberId}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <div style={{
-                        width: 34, height: 34, borderRadius: '50%',
-                        background: m.photoUrl ? 'transparent' : 'var(--accent-primary)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '0.75rem', fontWeight: 700, color: 'white',
-                        overflow: 'hidden', flexShrink: 0,
-                      }}>
-                        {m.photoUrl
-                          ? <img src={m.photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : m.fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-                        }
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{m.fullName}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{m.memberId}</div>
-                      </div>
+      ) : members.length > 0 ? (
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-xs)', overflow: 'hidden',
+        }}>
+          {/* Table header */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr 120px 100px',
+            padding: '10px 20px', background: 'var(--bg-elevated)',
+            borderBottom: '1px solid var(--border)',
+            fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)',
+            color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}>
+            <span>{t('common.member')}</span>
+            <span className="hide-mobile">{t('members.plan')}</span>
+            <span>{t('members.payment')}</span>
+            <span style={{ textAlign: 'right' }}>{t('members.actions')}</span>
+          </div>
+
+          {/* Rows */}
+          {members.map((m) => {
+            const ps = m.paymentStatus || 'unpaid';
+            const daysLeft = m.plan?.daysRemaining;
+            const expiryWarning = daysLeft != null && daysLeft <= 7 && daysLeft >= 0;
+            const isExpired = m.status === 'expired' || (daysLeft != null && daysLeft < 0);
+            const outstanding = m.billing?.remainingBalance || 0;
+
+            return (
+              <div key={m.memberId} style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr 120px 100px',
+                padding: '12px 20px', borderBottom: '1px solid var(--border)',
+                alignItems: 'center', transition: 'var(--transition-fast)',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              onClick={() => viewMember(m.memberId)}
+              >
+                {/* Member info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                    background: m.photoUrl ? 'transparent' : 'var(--accent-primary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)', color: '#fff',
+                    overflow: 'hidden',
+                  }}>
+                    <LazyMemberPhoto src={m.photoUrl} fullName={m.fullName} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-medium)', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {m.fullName}
                     </div>
-                  </td>
-                  <td>{m.phone}</td>
-                  <td>
-                    <span style={{ textTransform: 'capitalize' }}>{m.plan?.type}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${getBadgeClass(m.status)}`}>{m.status}</span>
-                  </td>
-                  <td>
-                    {(() => {
-                      const ps = m.paymentStatus || 'unpaid';
-                      const colors = { paid: 'var(--success)', partial: 'var(--warning)', unpaid: 'var(--danger)', overdue: '#dc2626' };
-                      const bgs = { paid: 'rgba(16,185,129,0.12)', partial: 'rgba(245,158,11,0.12)', unpaid: 'rgba(239,68,68,0.12)', overdue: 'rgba(220,38,38,0.15)' };
-                      return <span style={{ padding: '0.2rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 600, background: bgs[ps], color: colors[ps] }}>{ps.toUpperCase()}</span>;
-                    })()}
-                  </td>
-                  <td>
-                    <span style={{
-                      color: m.plan?.daysRemaining <= 5 ? 'var(--danger)' :
-                             m.plan?.daysRemaining <= 14 ? 'var(--warning)' : 'var(--text-secondary)',
-                      fontWeight: m.plan?.daysRemaining <= 5 ? 700 : 400,
-                    }}>
-                      {m.plan?.daysRemaining != null ? `${m.plan.daysRemaining}d` : '—'}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
-                      <button className="btn btn-ghost btn-sm" onClick={() => viewMember(m.memberId)} title="View">
-                        <Eye size={15} />
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{m.memberId}</div>
+                  </div>
+                  {/* Inline status badge on mobile */}
+                  <span className={`badge ${getBadgeClass(m.status)}`} style={{ marginLeft: 'auto', flexShrink: 0 }}>{m.status}</span>
+                </div>
+
+                {/* Plan & expiry */}
+                <div className="hide-mobile" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                  <span style={{ textTransform: 'capitalize' }}>{m.plan?.type || '—'}</span>
+                  {m.plan?.expiryDate && (() => {
+                    const exp = formatExpiry(m.plan.expiryDate);
+                    return (
+                      <span style={{
+                        marginLeft: 6,
+                        color: exp.urgency === 'danger' ? 'var(--danger)' : exp.urgency === 'warning' ? 'var(--warning)' : 'var(--text-muted)',
+                        fontSize: 'var(--text-xs)',
+                      }}>
+                        · {exp.text}
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                {/* Payment badge */}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <span style={{
+                    padding: '2px 8px', borderRadius: 9999,
+                    fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)',
+                    textTransform: 'uppercase',
+                    background: ps === 'paid' ? 'var(--success-bg)' : ps === 'partial' ? 'var(--warning-bg)' : 'var(--danger-bg)',
+                    color: ps === 'paid' ? 'var(--success)' : ps === 'partial' ? 'var(--warning)' : 'var(--danger)',
+                  }}>{ps}</span>
+                  {outstanding > 0 && ps !== 'paid' && (
+                    <div style={{ fontSize: 10, color: 'var(--danger)', marginTop: 2 }}>{fmtETB(outstanding, 'en')}</div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => viewMember(m.memberId)} title="View">
+                    <Eye size={15} />
+                  </button>
+                  {(staff?.role === 'owner' || staff?.role === 'receptionist') && (
+                    <div className="action-dropdown" ref={openMenu === m.memberId ? menuRef : null}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setOpenMenu(openMenu === m.memberId ? null : m.memberId)} title="More">
+                        <MoreVertical size={15} />
                       </button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => viewQR(m.memberId)} title="QR Code">
-                        <QrCode size={15} />
-                      </button>
-                      {(staff?.role === 'owner' || staff?.role === 'receptionist') && (
-                        <>
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => downloadCard(m.memberId)}
-                            title="Print Card"
-                            disabled={printingCard === m.memberId}
-                            style={{ color: 'var(--accent-primary)' }}
-                          >
-                            {printingCard === m.memberId
-                              ? <div className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }}></div>
-                              : <CreditCard size={15} />
-                            }
+                      {openMenu === m.memberId && (
+                        <div className="action-menu">
+                          <button className="action-menu-item" onClick={() => { setOpenMenu(null); viewMember(m.memberId); }}>
+                            <Eye size={14} /> View Details
                           </button>
-                          {/* Action Dropdown */}
-                          <div className="action-dropdown" ref={openMenu === m.memberId ? menuRef : null}>
-                            <button className="btn btn-ghost btn-sm" onClick={() => setOpenMenu(openMenu === m.memberId ? null : m.memberId)} title="More actions">
-                              <MoreVertical size={15} />
+                          <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowStatusModal(m); }}>
+                            <ShieldAlert size={14} /> Change Status
+                          </button>
+                          <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowEditModal(m); }}>
+                            <Edit3 size={14} /> Edit Member
+                          </button>
+                          {m.paymentStatus !== 'paid' && (
+                            <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowPaymentModal(m); }}>
+                              <DollarSign size={14} /> Record Payment
                             </button>
-                            {openMenu === m.memberId && (
-                              <div className="action-menu">
-                                <button className="action-menu-item" onClick={() => { setOpenMenu(null); viewMember(m.memberId); }}>
-                                  <Eye size={14} /> View Details
-                                </button>
-                                <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowStatusModal(m); }}>
-                                  <ShieldAlert size={14} /> Change Status
-                                </button>
-                                <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowEditModal(m); }}>
-                                  <Edit3 size={14} /> Edit Member
-                                </button>
-                                {m.paymentStatus !== 'paid' && (
-                                  <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowPaymentModal(m); }}>
-                                    <DollarSign size={14} /> Record Payment
-                                  </button>
-                                )}
-                                {(m.status === 'expired' || m.plan?.daysRemaining <= 5) && (
-                                  <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowRenewModal(m); setSelectedMember(null); }}>
-                                    <RotateCw size={14} /> Renew Plan
-                                  </button>
-                                )}
-                                {staff?.role === 'owner' && (
-                                  <>
-                                    <div className="action-menu-divider" />
-                                    <button className="action-menu-item danger" onClick={() => { setOpenMenu(null); setShowDeleteModal(m); }}>
-                                      <Trash2 size={14} /> Delete Member
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </>
+                          )}
+                          {(m.status === 'expired' || m.plan?.daysRemaining <= 5) && (
+                            <button className="action-menu-item" onClick={() => { setOpenMenu(null); setShowRenewModal(m); setSelectedMember(null); }}>
+                              <RotateCw size={14} /> Renew Plan
+                            </button>
+                          )}
+                          <button className="action-menu-item" onClick={() => { setOpenMenu(null); viewQR(m.memberId); }}>
+                            <QrCode size={14} /> View QR Code
+                          </button>
+                          <button className="action-menu-item" onClick={() => { setOpenMenu(null); downloadCard(m.memberId); }}>
+                            <CreditCard size={14} /> Download Card
+                          </button>
+                          {staff?.role === 'owner' && (
+                            <>
+                              <div className="action-menu-divider" />
+                              <button className="action-menu-item danger" onClick={() => { setOpenMenu(null); setShowDeleteModal(m); }}>
+                                <Trash2 size={14} /> Delete Member
+                              </button>
+                            </>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="empty-state">
-                      <UserX size={32} />
-                      <h3>No members found</h3>
-                      <p>Try adjusting your search or filters</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                  )}
+                </div>
+              </div>
+            );
+          })}
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="pagination">
-              <div className="pagination-info">
-                Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
-              </div>
-              <div className="pagination-buttons">
-                <button className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-                  Previous
-                </button>
-                <button className="btn btn-secondary btn-sm" disabled={page >= pagination.totalPages} onClick={() => setPage(p => p + 1)}>
-                  Next
-                </button>
-              </div>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '12px 20px', borderTop: '1px solid var(--border)',
+            fontSize: 'var(--text-xs)', color: 'var(--text-muted)',
+          }}>
+            <span>Showing {startItem}–{endItem} of {pagination.total || 0} members</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <select value={limit} onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '2px 6px', fontSize: 'var(--text-xs)', background: 'var(--bg-card)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
+                <option value={25}>25</option><option value={50}>50</option><option value={100}>100</option>
+              </select>
+              <button className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: '4px 8px' }}>
+                <ChevronLeft size={14} /> Prev
+              </button>
+              <button className="btn btn-secondary btn-sm" disabled={page >= pagination.totalPages} onClick={() => setPage(p => p + 1)} style={{ padding: '4px 8px' }}>
+                Next <ChevronRight size={14} />
+              </button>
             </div>
+          </div>
+          <div ref={sentinelRef} style={{ height: 1 }} />
+        </div>
+      ) : (
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)', padding: '48px 24px', textAlign: 'center',
+        }}>
+          <UserX size={32} style={{ color: 'var(--text-muted)', opacity: 0.4, marginBottom: 12 }} />
+          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--font-semibold)', color: 'var(--text-secondary)', marginBottom: 4 }}>No members found</h3>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+            {search || statusFilter ? 'Try adjusting your search or filters' : 'Add your first member to get started'}
+          </p>
+          {!search && !statusFilter && (staff?.role === 'owner' || staff?.role === 'receptionist') && (
+            <button className="btn btn-primary" onClick={() => setShowModal(true)} style={{ marginTop: 16, borderRadius: 'var(--radius-md)' }}>
+              <Plus size={16} /> Add Member
+            </button>
           )}
         </div>
       )}
@@ -426,7 +530,19 @@ export default function MembersPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Expiry Date</label>
-                <div>{selectedMember.plan?.expiryDate ? new Date(selectedMember.plan.expiryDate).toLocaleDateString() : '—'}</div>
+                {selectedMember.plan?.expiryDate ? (() => {
+                  const exp = formatExpiry(selectedMember.plan.expiryDate);
+                  return (
+                    <div>
+                      <div>{formatBilingual(selectedMember.plan.expiryDate)}</div>
+                      <div style={{
+                        fontSize: 'var(--text-xs)', marginTop: 2,
+                        color: exp.urgency === 'danger' ? 'var(--danger)' : exp.urgency === 'warning' ? 'var(--warning)' : 'var(--text-muted)',
+                        fontWeight: 'var(--font-medium)',
+                      }}>{exp.text}</div>
+                    </div>
+                  );
+                })() : <div>—</div>}
               </div>
               <div className="form-group">
                 <label className="form-label">Days Remaining</label>
@@ -560,15 +676,18 @@ export default function MembersPage() {
 }
 
 function AddMemberModal({ onClose, onSuccess }) {
+  const { branches, currentBranch, isMultiBranch, branchId } = useBranch();
   const [form, setForm] = useState({
     fullName: '', phone: '', planType: '3-day', durationMonths: 1,
     allowedDays: [1, 3, 5], startDate: new Date().toISOString().split('T')[0],
-    planPrice: 0,
+    planPrice: 0, branchId: branchId || '',
   });
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [compressing, setCompressing] = useState(false);
+  const [sizeInfo, setSizeInfo] = useState('');
 
   // Fetch dynamic plans on mount
   useEffect(() => {
@@ -619,6 +738,7 @@ function AddMemberModal({ onClose, onSuccess }) {
           allowedDays: form.planType === '3-day' ? form.allowedDays : null,
         },
         planPrice: form.planPrice,
+        ...(form.branchId ? { branchId: form.branchId } : {}),
       });
       onSuccess();
     } catch (err) {
@@ -664,7 +784,19 @@ function AddMemberModal({ onClose, onSuccess }) {
             <input className="form-input" placeholder="+251..." value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
           </div>
 
-          {/* Optional Photo */}
+          {/* Branch selector — only if multi-branch */}
+          {isMultiBranch && (
+            <div className="form-group">
+              <label className="form-label">Branch</label>
+              <select className="form-select" value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })} required>
+                <option value="">Select branch...</option>
+                {branches.map(b => (
+                  <option key={b._id} value={b._id}>{b.name}{b.isHeadquarters ? ' (HQ)' : ''}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="form-group">
             <label className="form-label">Photo <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -685,39 +817,58 @@ function AddMemberModal({ onClose, onSuccess }) {
                 background: 'var(--bg-elevated)', border: '1px solid var(--border)',
                 cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-secondary)',
               }}>
-                {photoPreview ? 'Change' : 'Upload Photo'}
-                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => {
+                {compressing ? 'Optimizing...' : photoPreview ? 'Change' : 'Upload Photo'}
+                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} disabled={compressing} onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
-                  // No file size limit — compression handles everything
-                  const canvas = document.createElement('canvas');
-                  const ctx = canvas.getContext('2d');
-                  const img = new Image();
-                  img.onload = () => {
-                    const size = 300; // Larger for better card print quality
-                    canvas.width = size;
-                    canvas.height = size;
-                    ctx.fillStyle = '#1a1f35'; // Dark background fill
-                    ctx.fillRect(0, 0, size, size);
-                    const scale = Math.max(size / img.width, size / img.height);
-                    const x = (size - img.width * scale) / 2;
-                    const y = (size - img.height * scale) / 2;
-                    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-                    setPhotoPreview(canvas.toDataURL('image/jpeg', 0.75));
-                    URL.revokeObjectURL(img.src);
-                  };
-                  img.onerror = () => {
-                    setError('Could not load image. Try a different photo.');
-                    URL.revokeObjectURL(img.src);
-                  };
-                  img.src = URL.createObjectURL(file);
+                  
+                  const originalSizeKb = (file.size / 1024).toFixed(1);
+                  if (file.size < 50 * 1024) {
+                    // Skip compression
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                      setPhotoPreview(evt.target.result);
+                      setSizeInfo(`${originalSizeKb} KB (Uncompressed)`);
+                    };
+                    reader.readAsDataURL(file);
+                    return;
+                  }
+
+                  setCompressing(true);
+                  setSizeInfo('Compressing...');
+                  
+                  import('@/lib/imageOptimization').then(({ compressImage }) => {
+                    compressImage(file, 300, 75).then((compressedBlob) => {
+                      const compressedSizeKb = (compressedBlob.size / 1024).toFixed(1);
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        setPhotoPreview(evt.target.result);
+                        setSizeInfo(`${originalSizeKb} KB → ${compressedSizeKb} KB`);
+                        setCompressing(false);
+                      };
+                      reader.readAsDataURL(compressedBlob);
+                    }).catch(() => {
+                      setCompressing(false);
+                      setSizeInfo('Compression failed, using original');
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        setPhotoPreview(evt.target.result);
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                  });
                 }} />
               </label>
-              {photoPreview && (
+              {photoPreview && !compressing && (
                 <button type="button" className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', color: 'var(--danger)' }}
-                  onClick={() => setPhotoPreview(null)}>Remove</button>
+                  onClick={() => { setPhotoPreview(null); setSizeInfo(''); }}>Remove</button>
               )}
             </div>
+            {sizeInfo && (
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                Size: {sizeInfo}
+              </div>
+            )}
           </div>
 
           {/* Plan Selection */}

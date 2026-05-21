@@ -19,6 +19,7 @@ const salesRoutes = require('./modules/sales/sales.routes');
 const auditRoutes = require('./modules/audit/audit.routes');
 const settingsRoutes = require('./modules/settings/settings.routes');
 const duesRoutes = require('./modules/dues/dues.routes');
+const branchRoutes = require('./modules/branches/branches.routes');
 
 router.use('/auth', authRoutes);
 router.use('/members', memberRoutes);
@@ -34,5 +35,6 @@ router.use('/sales', salesRoutes);
 router.use('/audit', auditRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/dues', duesRoutes);
+router.use('/branches', branchRoutes);
 
 module.exports = router;

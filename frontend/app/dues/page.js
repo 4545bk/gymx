@@ -4,6 +4,9 @@ import ProtectedLayout from '@/components/ProtectedLayout';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { Wallet, DollarSign, AlertTriangle, CheckCircle, Clock, X, CreditCard, History } from 'lucide-react';
+import { SkeletonTableRows } from '@/components/ui/Skeleton';
+import { fmtETB } from '@/lib/currency';
+import { formatBilingual } from '@/lib/ethiopianDate';
 
 export default function DuesPage() {
   const { staff } = useAuth();
@@ -37,7 +40,7 @@ export default function DuesPage() {
   useEffect(() => { fetchOverview(); }, [fetchOverview]);
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
-  const formatPrice = (cents) => `${(cents / 100).toLocaleString()} ETB`;
+  const formatPrice = (cents) => fmtETB(cents);
 
   const statusColors = {
     paid: { bg: 'rgba(16, 185, 129, 0.12)', color: 'var(--success)', label: 'Paid' },
@@ -106,7 +109,7 @@ export default function DuesPage() {
 
       {/* Members Table */}
       {loading ? (
-        <div className="loading-page"><div className="spinner spinner-lg"></div></div>
+        <div className="table-wrapper"><table><thead><tr><th>Member</th><th>Plan</th><th>Status</th><th>Due</th><th>Paid</th><th>Balance</th><th>Status</th><th>Actions</th></tr></thead><tbody><SkeletonTableRows rows={8} cols={8} /></tbody></table></div>
       ) : (
         <div className="table-wrapper">
           <table>
@@ -197,7 +200,7 @@ function PaymentModal({ member, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const formatPrice = (cents) => `${(cents / 100).toLocaleString()} ETB`;
+  const formatPrice = (cents) => fmtETB(cents);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
@@ -278,7 +281,7 @@ function HistoryModal({ member, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const formatPrice = (cents) => `${(cents / 100).toLocaleString()} ETB`;
+  const formatPrice = (cents) => fmtETB(cents);
 
   useEffect(() => {
     api.get(`/dues/${member.memberId}/history`)
@@ -296,7 +299,7 @@ function HistoryModal({ member, onClose }) {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '2rem' }}><div className="spinner spinner-lg"></div></div>
+          <div style={{ padding: '1rem' }}><SkeletonTableRows rows={3} cols={3} /></div>
         ) : data ? (
           <>
             <div style={{ background: 'var(--bg-elevated)', borderRadius: 'var(--radius-md)', padding: '1rem', marginBottom: '1rem' }}>
@@ -323,7 +326,7 @@ function HistoryModal({ member, onClose }) {
                       {p.description && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{p.description}</div>}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'right' }}>
-                      {new Date(p.recordedAt).toLocaleDateString()}
+                      {formatBilingual(p.recordedAt)}
                       <br />
                       <span style={{ fontSize: '0.7rem' }}>{new Date(p.recordedAt).toLocaleTimeString()}</span>
                     </div>

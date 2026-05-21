@@ -6,6 +6,8 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
 import api from '@/lib/api';
 import { Plus, DollarSign, ArrowUpRight, ArrowDownRight, FileText, TrendingUp, Download, Filter } from 'lucide-react';
+import { fmtETB } from '@/lib/currency';
+import { formatBilingual } from '@/lib/ethiopianDate';
 
 export default function FinancePage() {
   const { staff } = useAuth();
@@ -36,7 +38,7 @@ export default function FinancePage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const formatCurrency = (cents) => `${(cents / 100).toLocaleString()} ETB`;
+  const formatCurrency = (cents) => fmtETB(cents);
 
   const downloadReceipt = async (paymentId) => {
     try {
@@ -136,7 +138,7 @@ export default function FinancePage() {
                   const methodInfo = getMethodBadge(p.paymentMethod);
                   return (
                     <tr key={p.id || p._id} style={{ opacity: p.voided ? 0.5 : 1 }}>
-                      <td style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(p.recordedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                      <td style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatBilingual(p.recordedAt)}</td>
                       <td>
                         <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{p.description}{p.voided ? ' (voided)' : ''}</div>
                         {p.invoiceId && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>INV-{p.invoiceId}</div>}

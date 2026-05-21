@@ -1,79 +1,186 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ScanLine, CheckCircle, XCircle, Clock, Wifi, WifiOff, Zap, Shield, AlertTriangle, UserX, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, Wifi, WifiOff, RefreshCw, ScanLine, ArrowLeft, Volume2, VolumeX, Smartphone } from 'lucide-react';
 import { offlineCheckin, syncPendingCheckins, getPendingCount, syncMembersToOffline, getLastSyncInfo, clearTodayCheckins } from '@/lib/offlineDB';
 import api from '@/lib/api';
+import Link from 'next/link';
+import { useI18n } from '@/lib/i18n';
+import { formatRelative, toEthiopian, formatWithWeekday } from '@/lib/ethiopianDate';
 
-// ─── Denial reason → human-readable label + icon mapping ──
-const DENIAL_MAP = {
-  'invalid-format': { label: 'Invalid QR Code', icon: '🚫', color: 'var(--danger)' },
-  'unknown-id': { label: 'Unknown Member', icon: '❓', color: 'var(--danger)' },
-  'expired': { label: 'Membership Expired', icon: '⏰', color: 'var(--danger)' },
-  'suspended': { label: 'Account Suspended', icon: '🔒', color: 'var(--warning)' },
-  'frozen': { label: 'Account Frozen', icon: '❄️', color: 'var(--info)' },
-  'wrong-day': { label: 'Not Allowed Today', icon: '📅', color: 'var(--warning)' },
-  'duplicate': { label: 'Already Checked In', icon: '🔄', color: 'var(--warning)' },
-  'error': { label: 'System Error', icon: '⚠️', color: 'var(--danger)' },
+const DENIAL_KEYS = {
+  'invalid-format': 'checkin.denialInvalid',
+  'unknown-id': 'checkin.denialUnknown',
+  'expired': 'checkin.denialExpired',
+  'suspended': 'checkin.denialSuspended',
+  'frozen': 'checkin.denialFrozen',
+  'wrong-day': 'checkin.denialWrongDay',
+  'duplicate': 'checkin.denialDuplicate',
+  'error': 'checkin.denialError',
 };
 
+const getInitials = (name) => name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
+
+function VirtualFeed({ items, getDenialLabel, getInitials, formatRelative, t }) {
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(400);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const updateHeight = () => {
+      setContainerHeight(containerRef.current.clientHeight);
+    };
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
+
+  const handleScroll = (e) => {
+    setScrollTop(e.target.scrollTop);
+  };
+
+  const itemHeight = 54; // height + gap
+  const totalHeight = items.length * itemHeight;
+
+  const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 1);
+  const endIndex = Math.min(items.length - 1, Math.floor((scrollTop + containerHeight) / itemHeight) + 1);
+
+  const visibleItems = [];
+  for (let i = startIndex; i <= endIndex; i++) {
+    visibleItems.push({ item: items[i], index: i });
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      style={{
+        flex: 1,
+        overflowY: 'auto',
+        position: 'relative',
+        height: '100%',
+      }}
+    >
+      <div style={{ height: totalHeight, width: '100%', position: 'relative' }}>
+        {visibleItems.map(({ item, index }) => (
+          <div
+            key={`${item.memberId}-${item.checkedInAt}-${index}`}
+            style={{
+              position: 'absolute',
+              top: index * itemHeight,
+              left: 0,
+              right: 0,
+              height: 48,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 12px',
+              borderRadius: 8,
+              background: index === 0 ? (item.result === 'granted' ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)') : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${index === 0 ? (item.result === 'granted' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)') : 'rgba(255,255,255,0.04)'}`,
+              animation: index === 0 ? 'slideDown 300ms ease' : 'none',
+            }}
+          >
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+              background: item.result === 'granted' ? '#1A5C3A' : '#7f1d1d',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 600, color: '#fff',
+            }}>
+              {getInitials(item.fullName)}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: '#E8F5EE', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.fullName}
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                {formatRelative(item.checkedInAt)}
+              </div>
+            </div>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 9999,
+              background: item.result === 'granted' ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+              color: item.result === 'granted' ? '#22c55e' : '#EF4444',
+              textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0,
+            }}>
+              {item.result === 'granted' ? 'Granted' : getDenialLabel(item.denyReason)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function CheckinPage() {
+  const { t } = useI18n();
   const [result, setResult] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [scanning, setScanning] = useState(false);
   const [connected, setConnected] = useState(false);
-  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState(true);
   const [feed, setFeed] = useState([]);
   const [stats, setStats] = useState({ granted: 0, denied: 0 });
   const [resultKey, setResultKey] = useState(0);
   const [pendingSync, setPendingSync] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null);
+  const [muted, setMuted] = useState(false);
+  const [clock, setClock] = useState(null);
   const inputRef = useRef(null);
   const timeoutRef = useRef(null);
+  const retryRef = useRef(null);
+  const retryDelay = useRef(3000);
+  const audioUnlocked = useRef(false);
 
-  // Auto-detect API URL
   const API_BASE = typeof window !== 'undefined'
     ? `http://${window.location.hostname}:5000/api/v1`
     : (process.env.NEXT_PUBLIC_API_URL || '/api/v1');
   const SCANNER_KEY = 'gymx-scanner-api-key-2026-c9f5e1d7b3a8f4c0e6d2b9a5c1f7e3d8';
 
-  // ─── Online/Offline detection ─────────────────────────────
+  // ─── Live clock ──────────────────────────────────────────
+  useEffect(() => {
+    setClock(new Date());
+    const t = setInterval(() => setClock(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // ─── Unlock audio on first user interaction ──────────────
+  useEffect(() => {
+    const unlock = () => { audioUnlocked.current = true; };
+    document.addEventListener('click', unlock, { once: true });
+    document.addEventListener('keydown', unlock, { once: true });
+    return () => { document.removeEventListener('click', unlock); document.removeEventListener('keydown', unlock); };
+  }, []);
+
+  // ─── Online/Offline detection ────────────────────────────
   useEffect(() => {
     const goOnline = async () => {
       setIsOnline(true);
-      // Auto-sync pending check-ins when coming back online
       const count = await getPendingCount();
       if (count > 0) {
         setSyncing(true);
-        const { synced } = await syncPendingCheckins(SCANNER_KEY, API_BASE);
+        await syncPendingCheckins(SCANNER_KEY, API_BASE);
         setPendingSync(await getPendingCount());
         setSyncing(false);
       }
-      // Refresh offline member cache
       syncMembersToOffline(api);
     };
     const goOffline = () => setIsOnline(false);
-
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
+    return () => { window.removeEventListener('online', goOnline); window.removeEventListener('offline', goOffline); };
   }, [API_BASE, SCANNER_KEY]);
 
-  // ─── Initial sync: cache members for offline use ──────────
+  // ─── Initial sync ────────────────────────────────────────
   useEffect(() => {
+    setIsOnline(navigator.onLine);
     const init = async () => {
-      if (navigator.onLine) {
-        await syncMembersToOffline(api);
-      }
+      if (navigator.onLine) await syncMembersToOffline(api);
       const info = await getLastSyncInfo();
       setLastSync(info);
       setPendingSync(await getPendingCount());
-
-      // Clear today's offline check-ins at midnight
       const now = new Date();
       const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
       setTimeout(() => clearTodayCheckins(), msUntilMidnight);
@@ -81,550 +188,416 @@ export default function CheckinPage() {
     init();
   }, []);
 
-  // ─── Auto-focus ───────────────────────────────────────────
+  // ─── Load today's feed ───────────────────────────────────
+  const fetchToday = useCallback(async () => {
+    try {
+      const { data } = await api.get('/checkin/today?limit=50');
+      const items = data.data || [];
+      setFeed(items);
+      const g = items.filter(i => i.result === 'granted').length;
+      setStats({ granted: g, denied: items.length - g });
+    } catch (e) { /* ignore */ }
+  }, []);
+
+  useEffect(() => { if (isOnline) fetchToday(); }, [fetchToday, isOnline]);
+
+  // ─── SSE with exponential backoff reconnect ──────────────
+  useEffect(() => {
+    if (!isOnline) return;
+    let es;
+    const connect = () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
+      es = new EventSource(`${API_BASE}/checkin/stream?token=${token}`);
+      es.onopen = () => { setConnected(true); retryDelay.current = 3000; };
+      es.onmessage = (event) => {
+        try {
+          const d = JSON.parse(event.data);
+          if (d.type === 'connected') return;
+          setFeed(prev => [d, ...prev].slice(0, 50));
+          setStats(prev => ({
+            granted: prev.granted + (d.result === 'granted' ? 1 : 0),
+            denied: prev.denied + (d.result === 'denied' ? 1 : 0),
+          }));
+        } catch (e) { /* ignore */ }
+      };
+      es.onerror = () => {
+        setConnected(false);
+        es.close();
+        retryRef.current = setTimeout(() => {
+          retryDelay.current = Math.min(retryDelay.current * 2, 12000);
+          connect();
+        }, retryDelay.current);
+      };
+    };
+    connect();
+    return () => { es?.close(); clearTimeout(retryRef.current); };
+  }, [API_BASE, isOnline]);
+
+  // ─── Auto-focus ──────────────────────────────────────────
   useEffect(() => {
     inputRef.current?.focus();
-    const refocus = (e) => {
-      if (e.target !== inputRef.current) {
-        setTimeout(() => inputRef.current?.focus(), 50);
-      }
-    };
+    const refocus = (e) => { if (e.target !== inputRef.current) setTimeout(() => inputRef.current?.focus(), 50); };
     document.addEventListener('click', refocus);
     return () => document.removeEventListener('click', refocus);
   }, []);
+  useEffect(() => { if (!result && !scanning) inputRef.current?.focus(); }, [result, scanning]);
 
-  useEffect(() => {
-    if (!result && !scanning) inputRef.current?.focus();
-  }, [result, scanning]);
-
-  // ─── SSE Live Feed ────────────────────────────────────────
-  useEffect(() => {
-    if (!isOnline) return;
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
-
-    const eventSource = new EventSource(`${API_BASE}/checkin/stream`);
-    eventSource.onopen = () => setConnected(true);
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'connected') return;
-        setFeed(prev => [data, ...prev].slice(0, 30));
-      } catch (e) { /* ignore */ }
-    };
-    eventSource.onerror = () => setConnected(false);
-    return () => eventSource.close();
-  }, [API_BASE, isOnline]);
-
-  // ─── Sound Effects ────────────────────────────────────────
+  // ─── Sound ───────────────────────────────────────────────
   const playSound = useCallback((type) => {
+    if (muted || !audioUnlocked.current) return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      gain.gain.value = 0.08;
-
+      osc.connect(gain); gain.connect(ctx.destination);
       if (type === 'granted') {
-        osc.frequency.value = 880;
-        osc.type = 'sine';
+        osc.frequency.value = 800; osc.type = 'sine';
         gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+        osc.start(); osc.stop(ctx.currentTime + 0.2);
       } else {
-        osc.frequency.value = 220;
-        osc.type = 'square';
-        gain.gain.setValueAtTime(0.06, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.5);
+        osc.frequency.value = 400; osc.type = 'square';
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        osc.start(); osc.stop(ctx.currentTime + 0.4);
       }
-    } catch (e) { /* no audio context */ }
-  }, []);
+    } catch (e) { /* no audio */ }
+  }, [muted]);
 
-  // ─── Process Scan (online + offline) ──────────────────────
+  // ─── Scan handler (online + offline) ─────────────────────
   const handleScan = useCallback(async (memberId) => {
     const id = memberId.trim();
     if (!id || scanning) return;
-
-    setScanning(true);
-    setResult(null);
-
+    setScanning(true); setResult(null);
     try {
       let scanResult;
-
       if (isOnline) {
-        // ── ONLINE: Use server API ──
         try {
           const res = await fetch(`${API_BASE}/checkin`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-scanner-key': SCANNER_KEY,
-            },
+            headers: { 'Content-Type': 'application/json', 'x-scanner-key': SCANNER_KEY },
             body: JSON.stringify({ memberId: id }),
           });
           const data = await res.json();
           scanResult = data.data;
         } catch (networkErr) {
-          // Network failed mid-request — fall back to offline
-          console.warn('Network failed, falling back to offline check-in');
           setIsOnline(false);
           scanResult = await offlineCheckin(id);
           setPendingSync(await getPendingCount());
         }
       } else {
-        // ── OFFLINE: Use IndexedDB ──
         scanResult = await offlineCheckin(id);
         setPendingSync(await getPendingCount());
       }
-
       setResult(scanResult);
       setResultKey(prev => prev + 1);
-
-      // Update session stats
+      if (scanResult.offline) {
+        setFeed(prev => [{
+          result: scanResult.result, fullName: scanResult.member?.fullName || 'Unknown',
+          memberId: id, denyReason: scanResult.denyReason, checkedInAt: new Date().toISOString(),
+        }, ...prev].slice(0, 50));
+      }
       setStats(prev => ({
         granted: prev.granted + (scanResult.result === 'granted' ? 1 : 0),
         denied: prev.denied + (scanResult.result === 'denied' ? 1 : 0),
       }));
-
-      // Add to local feed if offline
-      if (scanResult.offline) {
-        setFeed(prev => [{
-          result: scanResult.result,
-          fullName: scanResult.member?.fullName || 'Unknown',
-          memberId: id,
-          denyReason: scanResult.denyReason,
-          checkedInAt: new Date().toISOString(),
-        }, ...prev].slice(0, 30));
-      }
-
       playSound(scanResult.result);
-
       clearTimeout(timeoutRef.current);
-      const timeout = scanResult.result === 'granted' ? 3000 : 5000;
-      timeoutRef.current = setTimeout(() => setResult(null), timeout);
+      timeoutRef.current = setTimeout(() => setResult(null), 8000);
     } catch (err) {
-      const errorResult = {
-        result: 'denied',
-        denyReason: 'error',
-        message: 'System error — please try again',
-      };
-      setResult(errorResult);
+      setResult({ result: 'denied', denyReason: 'error', message: 'System error' });
       setResultKey(prev => prev + 1);
       playSound('denied');
       clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => setResult(null), 5000);
+      timeoutRef.current = setTimeout(() => setResult(null), 8000);
     }
-
-    setInputValue('');
-    setScanning(false);
+    setInputValue(''); setScanning(false);
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [API_BASE, SCANNER_KEY, scanning, playSound, isOnline]);
 
-  // ─── Enter Key Handler ──────────────────────────────────
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleScan(inputValue);
-    }
-  };
+  const handleKeyDown = (e) => { if (e.key === 'Enter') { e.preventDefault(); handleScan(inputValue); } };
 
-  const formatTime = (isoString) => {
-    return new Date(isoString).toLocaleTimeString('en-US', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
-  };
 
-  // ─── Denial info ────────────────────────────────────────
-  const getDenialInfo = (reason) => DENIAL_MAP[reason] || { label: 'Access Denied', icon: '❌', color: 'var(--danger)' };
 
+  const getDenialLabel = (r) => t(DENIAL_KEYS[r] || 'checkin.accessDenied');
+  const totalToday = stats.granted + stats.denied;
+
+  /* ═══════════════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════════════ */
   return (
     <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg-primary)',
-      padding: '1.5rem',
-      position: 'relative',
-      overflow: 'hidden',
+      minHeight: '100vh', background: '#0F1A14', color: '#E8F5EE',
+      display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)',
     }}>
-      {/* Ambient glow */}
-      <div style={{
-        position: 'absolute', top: '-20%', left: '50%', transform: 'translateX(-50%)',
-        width: '600px', height: '600px', borderRadius: '50%',
-        background: result?.result === 'granted'
-          ? 'radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%)'
-          : result?.result === 'denied'
-            ? 'radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%)',
-        transition: 'background 500ms ease',
-        pointerEvents: 'none',
-      }} />
 
-      {/* Offline Banner */}
-      {!isOnline && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-          padding: '0.5rem 1rem',
-          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-          color: 'white',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-          fontSize: '0.85rem', fontWeight: 700,
-          boxShadow: '0 2px 12px rgba(245,158,11,0.3)',
-        }}>
-          <WifiOff size={16} /> OFFLINE MODE — Check-ins are saved locally
+      {/* ─── Top Bar ──────────────────────────────────── */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '12px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Link href="/dashboard" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+            <ArrowLeft size={14} /> {t('checkin.backToDashboard')}
+          </Link>
+          <span style={{ color: 'rgba(255,255,255,0.1)' }}>|</span>
+          <Link href="/checkin/mobile" style={{
+            color: '#34D399', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
+            background: 'rgba(52,211,153,0.08)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(52,211,153,0.15)',
+            fontWeight: 500
+          }}>
+            <Smartphone size={13} /> {t('nav.mobileScanner')}
+          </Link>
+          <span style={{ fontSize: 16, fontWeight: 600, color: '#E8F5EE', marginLeft: 8 }}>GymX</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* Connection status */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+            <div style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: !isOnline ? '#EF4444' : connected ? '#22c55e' : '#FBBF24',
+              boxShadow: connected && isOnline ? '0 0 8px rgba(34,197,94,0.5)' : 'none',
+            }} />
+            <span style={{ color: !isOnline ? '#EF4444' : connected ? '#22c55e' : '#FBBF24' }}>
+              {!isOnline ? t('checkin.offline') : connected ? t('checkin.live') : t('checkin.reconnecting')}
+            </span>
+          </div>
+          {/* Mute toggle */}
+          <button onClick={() => setMuted(!muted)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: muted ? 'rgba(255,255,255,0.3)' : '#22c55e', padding: 4,
+          }}>
+            {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
+          {/* Pending sync */}
           {pendingSync > 0 && (
             <span style={{
-              background: 'rgba(255,255,255,0.25)', padding: '0.15rem 0.5rem',
-              borderRadius: '9999px', fontSize: '0.75rem',
-            }}>
-              {pendingSync} pending sync
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Pending sync banner (online but has unsynced) */}
-      {isOnline && pendingSync > 0 && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-          padding: '0.4rem 1rem',
-          background: 'var(--info-bg)',
-          border: '1px solid var(--info)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-          fontSize: '0.8rem', color: 'var(--info)',
-        }}>
-          <RefreshCw size={14} className={syncing ? 'spinner' : ''} />
-          {syncing ? `Syncing ${pendingSync} check-ins...` : `${pendingSync} check-ins pending sync`}
-          {!syncing && (
-            <button onClick={async () => {
-              setSyncing(true);
-              await syncPendingCheckins(SCANNER_KEY, API_BASE);
-              setPendingSync(await getPendingCount());
-              setSyncing(false);
-            }} style={{
-              background: 'var(--info)', color: 'white', border: 'none',
-              padding: '0.2rem 0.6rem', borderRadius: '4px', cursor: 'pointer',
-              fontSize: '0.75rem', fontWeight: 600,
-            }}>Sync Now</button>
-          )}
-        </div>
-      )}
-
-      {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '1.5rem', position: 'relative', zIndex: 1, marginTop: (!isOnline || pendingSync > 0) ? '2.5rem' : 0 }}>
-        <h1 style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>
-          <span className="text-gradient">GymX Check-In</span>
-        </h1>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: '1rem', fontSize: '0.8rem', flexWrap: 'wrap',
-        }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: isOnline ? (connected ? 'var(--success)' : 'var(--text-muted)') : 'var(--warning)' }}>
-            {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
-            {isOnline ? (connected ? 'Live' : 'Connecting...') : 'Offline'}
-          </span>
-          <span style={{ color: 'var(--border)' }}>|</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: 'var(--success)' }}>
-            <CheckCircle size={13} /> {stats.granted}
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: 'var(--danger)' }}>
-            <XCircle size={13} /> {stats.denied}
-          </span>
-          <span style={{ color: 'var(--border)' }}>|</span>
-          <a href="/checkin/mobile" target="_blank" style={{
-            display: 'flex', alignItems: 'center', gap: '0.375rem',
-            color: 'var(--accent-primary)', textDecoration: 'none', fontSize: '0.8rem',
-          }}>
-            📱 Mobile Scanner
-          </a>
-          {lastSync && (
-            <>
-              <span style={{ color: 'var(--border)' }}>|</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                DB: {lastSync.memberCount} members
-              </span>
-            </>
+              fontSize: 11, padding: '2px 8px', borderRadius: 9999,
+              background: 'rgba(251,191,36,0.15)', color: '#FBBF24',
+            }}>{pendingSync} {t('checkin.pending')}</span>
           )}
         </div>
       </div>
 
-      {/* ─── Scan Input (visible for manual testing) ─── */}
-      <div style={{
-        width: '100%', maxWidth: '480px', marginBottom: '2rem',
-        position: 'relative', zIndex: 1,
-      }}>
+      {/* ─── Offline Banner ───────────────────────────── */}
+      {!isOnline && (
         <div style={{
-          display: 'flex', gap: '0.5rem',
-          background: 'var(--bg-card)',
-          border: `2px solid ${scanning ? 'var(--accent-primary)' : 'var(--border)'}`,
-          borderRadius: 'var(--radius-lg)',
-          padding: '0.375rem',
-          transition: 'border-color 200ms ease',
-          boxShadow: scanning ? '0 0 20px rgba(59,130,246,0.15)' : 'none',
+          padding: '8px 24px', background: 'rgba(251,191,36,0.1)',
+          borderBottom: '1px solid rgba(251,191,36,0.2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          fontSize: 13, color: '#FBBF24',
         }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', paddingLeft: '0.75rem',
-            color: 'var(--text-muted)',
-          }}>
-            <ScanLine size={18} style={{ animation: scanning ? 'spin 600ms linear infinite' : 'none' }} />
-          </div>
+          <WifiOff size={14} /> {t('checkin.offlineMode')}
+        </div>
+      )}
+
+      {/* ─── Main Content (two columns) ───────────────── */}
+      <div style={{
+        flex: 1, display: 'grid', gridTemplateColumns: '35% 1fr',
+        gap: 0, overflow: 'hidden',
+      }} className="checkin-grid">
+
+        {/* ═══ LEFT: Status Display ═══════════════════ */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', padding: '40px 32px',
+          borderRight: '1px solid rgba(255,255,255,0.06)',
+          position: 'relative',
+        }}>
+          {/* Hidden scan input */}
           <input
             ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value.toUpperCase())}
             onKeyDown={handleKeyDown}
-            placeholder="Scan QR or type Member ID..."
-            autoFocus
-            autoComplete="off"
-            spellCheck={false}
+            autoFocus autoComplete="off" spellCheck={false}
             style={{
-              flex: 1,
-              padding: '0.875rem 0.5rem',
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'var(--text-primary)',
-              fontSize: '1.1rem',
-              fontFamily: 'monospace',
-              letterSpacing: '0.05em',
+              position: 'absolute', opacity: 0, width: 1, height: 1,
+              pointerEvents: 'auto',
             }}
           />
-          <button
-            onClick={() => handleScan(inputValue)}
-            disabled={!inputValue.trim() || scanning}
-            style={{
-              padding: '0.75rem 1.25rem',
-              background: inputValue.trim() ? 'var(--accent-gradient)' : 'var(--bg-elevated)',
-              color: inputValue.trim() ? 'white' : 'var(--text-muted)',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              cursor: inputValue.trim() ? 'pointer' : 'default',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              transition: 'all 150ms ease',
-            }}
-          >
-            {scanning ? <div className="spinner" style={{ borderTopColor: 'white' }}></div> : 'Scan'}
-          </button>
-        </div>
-        <p style={{
-          textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-muted)',
-          marginTop: '0.5rem',
-        }}>
-          Paste member ID or scan QR code • Press Enter to submit
-        </p>
-      </div>
 
-      {/* ─── Result Display ─── */}
-      <div style={{ width: '100%', maxWidth: '520px', minHeight: '240px', position: 'relative', zIndex: 1 }}>
-        {scanning ? (
-          /* Loading state */
-          <div style={{
-            textAlign: 'center', padding: '3rem',
-            border: '2px solid var(--accent-primary)',
-            borderRadius: 'var(--radius-xl)',
-            background: 'var(--info-bg)',
-            animation: 'pulseIn 600ms ease',
-          }}>
-            <div className="spinner spinner-lg" style={{ margin: '0 auto 1rem' }}></div>
-            <h2 style={{ color: 'var(--text-secondary)' }}>Validating...</h2>
-          </div>
-        ) : result ? (
-          /* Result card */
-          <div key={resultKey} style={{
-            textAlign: 'center',
-            padding: '2.5rem 2rem',
-            borderRadius: 'var(--radius-xl)',
-            border: `3px solid ${result.result === 'granted' ? 'var(--success)' : 'var(--danger)'}`,
-            background: result.result === 'granted'
-              ? 'rgba(34, 197, 94, 0.08)'
-              : 'rgba(239, 68, 68, 0.08)',
-            boxShadow: result.result === 'granted'
-              ? '0 0 60px rgba(34, 197, 94, 0.15)'
-              : '0 0 60px rgba(239, 68, 68, 0.15)',
-            animation: 'resultPop 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-          }}>
-            {/* Icon */}
-            <div style={{
-              fontSize: '4rem', marginBottom: '0.75rem',
-              animation: result.result === 'granted' ? 'bounceIn 500ms ease' : 'shakeX 500ms ease',
-            }}>
-              {result.result === 'granted' ? '✅' : getDenialInfo(result.denyReason).icon}
-            </div>
-
-            {/* Offline badge */}
-            {result.offline && (
+          {scanning ? (
+            /* Scanning... */
+            <div style={{ textAlign: 'center' }}>
               <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                padding: '0.2rem 0.6rem', borderRadius: '9999px',
-                background: 'var(--warning-bg)', color: 'var(--warning)',
-                fontSize: '0.7rem', fontWeight: 700, marginBottom: '0.5rem',
-              }}>
-                <WifiOff size={11} /> OFFLINE — will sync later
-              </div>
-            )}
-
-            {/* Member name */}
-            <div style={{
-              fontSize: '1.75rem', fontWeight: 800,
-              color: 'var(--text-primary)',
-              marginBottom: '0.5rem',
-              letterSpacing: '-0.02em',
-            }}>
-              {result.member?.fullName || 'Unknown'}
+                width: 80, height: 80, borderRadius: '50%',
+                border: '3px solid rgba(34,197,94,0.3)',
+                borderTopColor: '#22c55e',
+                animation: 'spin 600ms linear infinite',
+                margin: '0 auto 24px',
+              }} />
+              <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)' }}>{t('checkin.validating')}</div>
             </div>
-
-            {/* Status label */}
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-              padding: '0.375rem 1.25rem',
-              borderRadius: '9999px',
-              fontSize: '1rem', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.08em',
-              background: result.result === 'granted' ? 'var(--success)' : 'var(--danger)',
-              color: 'white',
-            }}>
-              {result.result === 'granted' ? (
-                <><Zap size={16} /> ACCESS GRANTED</>
-              ) : (
-                <><Shield size={16} /> {getDenialInfo(result.denyReason).label}</>
-              )}
-            </div>
-
-            {/* Plan info / message */}
-            {result.result === 'granted' && result.member?.planType && (
+          ) : result ? (
+            /* ─── Result Card ─── */
+            <div key={resultKey} style={{ textAlign: 'center', animation: 'resultPop 400ms cubic-bezier(0.175,0.885,0.32,1.275)' }}>
+              {/* Status circle */}
               <div style={{
-                marginTop: '0.75rem', fontSize: '0.9rem', color: 'var(--text-secondary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                width: 80, height: 80, borderRadius: '50%', margin: '0 auto 20px',
+                background: result.result === 'granted' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                border: `3px solid ${result.result === 'granted' ? '#22c55e' : '#EF4444'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 0 40px ${result.result === 'granted' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
               }}>
-                Plan: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{result.member.planType}</span>
-                {result.member?.expiringSoon && (
-                  <span style={{
-                    background: 'var(--warning-bg)', color: 'var(--warning)',
-                    padding: '0.125rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600,
-                  }}>
-                    ⚠ Expiring Soon
-                  </span>
-                )}
+                {result.result === 'granted'
+                  ? <CheckCircle size={36} style={{ color: '#22c55e' }} />
+                  : <XCircle size={36} style={{ color: '#EF4444' }} />}
               </div>
-            )}
 
-            {result.message && (
-              <div style={{
-                marginTop: '0.5rem', fontSize: '0.85rem',
-                color: 'var(--text-muted)',
-              }}>
-                {result.message}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Idle / Ready state */
-          <div style={{
-            textAlign: 'center', padding: '3rem',
-            border: '2px dashed var(--border)',
-            borderRadius: 'var(--radius-xl)',
-            transition: 'all 300ms ease',
-          }}>
-            <ScanLine size={56} style={{
-              color: 'var(--accent-primary)',
-              marginBottom: '1rem',
-              animation: 'scanPulse 2.5s ease-in-out infinite',
-            }} />
-            <h2 style={{ color: 'var(--text-secondary)', marginBottom: '0.375rem', fontSize: '1.25rem' }}>
-              Ready to Scan
-            </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              Present QR code or type member ID above
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* ─── Live Feed ─── */}
-      {feed.length > 0 && (
-        <div style={{
-          marginTop: '2rem', width: '100%', maxWidth: '520px',
-          position: 'relative', zIndex: 1,
-        }}>
-          <h3 style={{
-            fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)',
-            textTransform: 'uppercase', letterSpacing: '0.08em',
-            marginBottom: '0.5rem',
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-          }}>
-            <Clock size={13} /> Live Feed
-          </h3>
-          <div style={{
-            display: 'flex', flexDirection: 'column', gap: '0.25rem',
-            maxHeight: '260px', overflowY: 'auto',
-          }}>
-            {feed.map((entry, i) => (
-              <div key={`${entry.memberId}-${i}`} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '0.5rem 0.75rem',
-                background: i === 0 ? (entry.result === 'granted' ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)') : 'var(--bg-card)',
-                borderRadius: 'var(--radius-md)',
-                border: `1px solid ${i === 0 ? (entry.result === 'granted' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)') : 'var(--border)'}`,
-                fontSize: '0.8rem',
-                animation: i === 0 ? 'slideUp 300ms ease' : 'none',
-                transition: 'all 300ms ease',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {entry.result === 'granted'
-                    ? <CheckCircle size={14} style={{ color: 'var(--success)' }} />
-                    : <XCircle size={14} style={{ color: 'var(--danger)' }} />}
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{entry.fullName}</span>
-                  {entry.denyReason && (
-                    <span style={{
-                      fontSize: '0.65rem', padding: '0.1rem 0.375rem',
-                      borderRadius: '4px', background: 'var(--danger-bg)',
-                      color: 'var(--danger)', fontWeight: 600,
-                    }}>
-                      {getDenialInfo(entry.denyReason).label}
-                    </span>
-                  )}
+              {/* Member photo/initials */}
+              {result.member?.fullName && (
+                <div style={{
+                  width: 56, height: 56, borderRadius: '50%', margin: '0 auto 12px',
+                  background: '#1A5C3A', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, fontWeight: 600, color: '#fff',
+                }}>
+                  {getInitials(result.member.fullName)}
                 </div>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontFamily: 'monospace' }}>
-                  {entry.checkedInAt ? formatTime(entry.checkedInAt) : ''}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+              )}
 
-      {/* ─── Custom Animations ─── */}
-      <style>{`
-        @keyframes scanPulse {
-          0%, 100% { opacity: 0.6; transform: translateY(0); }
-          50% { opacity: 1; transform: translateY(-4px); }
+              {/* Name */}
+              <div style={{ fontSize: 28, fontWeight: 600, color: '#fff', marginBottom: 4, letterSpacing: '-0.02em' }}>
+                {result.member?.fullName || 'Unknown'}
+              </div>
+
+              {/* Plan */}
+              {result.result === 'granted' && result.member?.planType && (
+                <div style={{ fontSize: 15, color: '#34D399', marginBottom: 12, textTransform: 'capitalize' }}>
+                  {result.member.planType}
+                </div>
+              )}
+
+              {/* Status label */}
+              <div style={{
+                fontSize: 20, fontWeight: 600, letterSpacing: '0.02em',
+                color: result.result === 'granted' ? '#22c55e' : '#EF4444',
+              }}>
+                {result.result === 'granted' ? t('checkin.accessGranted') : getDenialLabel(result.denyReason)}
+              </div>
+
+              {/* Offline badge */}
+              {result.offline && (
+                <div style={{
+                  marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '2px 10px', borderRadius: 9999,
+                  background: 'rgba(251,191,36,0.1)', color: '#FBBF24', fontSize: 11,
+                }}>
+                  <WifiOff size={10} /> {t('checkin.offline')} — will sync
+                </div>
+              )}
+
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 16 }}>
+                {t('checkin.justNow')}
+              </div>
+            </div>
+          ) : (
+            /* ─── Idle State ─── */
+            <div style={{ textAlign: 'center' }}>
+              {/* Pulse ring */}
+              <div style={{
+                width: 80, height: 80, borderRadius: '50%', margin: '0 auto 24px',
+                border: '2px solid rgba(26,92,58,0.4)',
+                animation: 'idlePulse 2.5s ease-in-out infinite',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <ScanLine size={32} style={{ color: 'rgba(34,197,94,0.5)' }} />
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 500, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
+                {t('checkin.readyToScan')}
+              </div>
+              {/* Live clock */}
+              <div style={{ fontSize: 36, fontWeight: 600, color: 'rgba(255,255,255,0.15)', letterSpacing: '-0.02em', marginBottom: 8, fontVariantNumeric: 'tabular-nums' }}>
+                {clock ? clock.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '--:--:--'}
+              </div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>
+                {clock ? formatWithWeekday(clock) : '...'}
+              </div>
+              <div style={{
+                marginTop: 20, fontSize: 14, color: '#34D399',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              }}>
+                <CheckCircle size={14} /> {totalToday} {t('checkin.checkinsToday')}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ═══ RIGHT: Activity Feed ═══════════════════ */}
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          padding: '20px 24px', overflow: 'hidden',
+        }}>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginBottom: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: '#E8F5EE' }}>{t('checkin.todayActivity')}</h2>
+              <span style={{
+                fontSize: 11, padding: '2px 8px', borderRadius: 9999,
+                background: 'rgba(34,197,94,0.1)', color: '#34D399', fontWeight: 600,
+              }}>{totalToday}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+              <span style={{ color: '#22c55e' }}>✓ {stats.granted}</span>
+              <span style={{ color: '#EF4444' }}>✕ {stats.denied}</span>
+            </div>
+          </div>
+
+          {feed.length > 0 ? (
+            <VirtualFeed
+              items={feed}
+              getDenialLabel={getDenialLabel}
+              getInitials={getInitials}
+              formatRelative={formatRelative}
+              t={t}
+            />
+          ) : (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.2)' }}>
+              <ScanLine size={32} style={{ marginBottom: 12, opacity: 0.3 }} />
+              <div style={{ fontSize: 14 }}>{t('checkin.noCheckinsYet')}</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>{t('checkin.scanToStart')}</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ─── Animations ───────────────────────────────── */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes idlePulse {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.08); }
         }
         @keyframes resultPop {
           0% { opacity: 0; transform: scale(0.85); }
           60% { transform: scale(1.03); }
           100% { opacity: 1; transform: scale(1); }
         }
-        @keyframes bounceIn {
-          0% { transform: scale(0); }
-          50% { transform: scale(1.2); }
-          70% { transform: scale(0.9); }
-          100% { transform: scale(1); }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-12px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes shakeX {
-          0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-12px); }
-          40% { transform: translateX(12px); }
-          60% { transform: translateX(-8px); }
-          80% { transform: translateX(8px); }
+        .checkin-grid {
+          grid-template-columns: 35% 1fr !important;
         }
-      `}</style>
+        @media (max-width: 768px) {
+          .checkin-grid {
+            grid-template-columns: 1fr !important;
+            grid-template-rows: auto 1fr !important;
+          }
+          .checkin-grid > div:first-child {
+            padding: 24px 16px !important;
+            border-right: none !important;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            min-height: auto !important;
+          }
+          .checkin-grid > div:last-child {
+            max-height: 300px;
+            padding: 16px !important;
+          }
+        }
+      ` }} />
     </div>
   );
 }

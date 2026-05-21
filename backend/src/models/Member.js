@@ -117,11 +117,17 @@ const memberSchema = new mongoose.Schema({
     },
   },
 
-  // Registered by (receptionist)
   registeredBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Staff',
     required: true,
+  },
+
+  // Multi-branch support (optional — null = default/single branch)
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    default: null,
   },
 }, {
   timestamps: true, // createdAt, updatedAt
@@ -142,5 +148,8 @@ memberSchema.index({ assignedTrainerId: 1, status: 1 });
 
 // Payment status — dues tracking queries
 memberSchema.index({ paymentStatus: 1, status: 1 });
+
+// Branch filtering
+memberSchema.index({ branchId: 1, status: 1 });
 
 module.exports = mongoose.model('Member', memberSchema);

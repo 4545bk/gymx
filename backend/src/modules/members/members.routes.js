@@ -5,6 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('./members.controller');
+const importCtrl = require('./import.controller');
 const auth = require('../../middleware/auth');
 const roleGuard = require('../../middleware/roleGuard');
 const validate = require('../../middleware/validate');
@@ -17,6 +18,10 @@ const {
 
 // All routes require authentication
 router.use(auth);
+
+// ─── Import routes (MUST be before /:memberId to avoid param capture) ───
+router.post('/import/preview', roleGuard(['owner', 'receptionist']), importCtrl.uploadMiddleware, importCtrl.preview);
+router.post('/import/confirm', roleGuard(['owner', 'receptionist']), importCtrl.confirm);
 
 // GET /members — list with filters (owner, receptionist, trainer)
 router.get('/', roleGuard(['owner', 'receptionist', 'trainer']), ctrl.list);

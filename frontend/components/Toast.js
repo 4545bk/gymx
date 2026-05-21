@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { CheckCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 const ToastContext = createContext();
@@ -24,6 +24,18 @@ export function ToastProvider({ children }) {
   };
 
   const dismiss = (id) => setToasts(prev => prev.filter(t => t.id !== id));
+
+  // Listen to slow connection warning events
+  useEffect(() => {
+    const handleSlow = (e) => {
+      const now = Date.now();
+      if (window._lastSlowToast && (now - window._lastSlowToast < 10000)) return;
+      window._lastSlowToast = now;
+      addToast('Network connection is slow. Retrying request...', 'info');
+    };
+    window.addEventListener('gymx-slow-connection', handleSlow);
+    return () => window.removeEventListener('gymx-slow-connection', handleSlow);
+  }, [addToast]);
 
   const icons = { success: CheckCircle, error: AlertTriangle, info: Info };
   const colors = {

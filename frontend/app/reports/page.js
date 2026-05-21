@@ -1,13 +1,19 @@
 'use client';
+
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import ProtectedLayout from '@/components/ProtectedLayout';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { BarChart3, Users, TrendingUp, CalendarCheck, AlertTriangle, UserCheck, Activity } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { SkeletonChartArea } from '@/components/ui/Skeleton';
+
+const ReportCharts = dynamic(() => import('@/components/ReportCharts'), {
+  ssr: false,
+  loading: () => <SkeletonChartArea height={240} />
+});
 
 const TABS = ['Overview', 'Revenue', 'Retention', 'Staff'];
-const CHART_COLORS = ['#10b981', '#3b82f6', '#22c55e', '#06b6d4', '#ef4444', '#f59e0b'];
 
 export default function ReportsPage() {
   const { staff } = useAuth();
@@ -87,16 +93,7 @@ export default function ReportsPage() {
                 <div className="card">
                   <div className="card-header"><h3><CalendarCheck size={18} style={{ color: 'var(--success)', marginRight: '0.5rem' }} />Attendance Trend</h3></div>
                   {attendanceReport?.series?.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={attendanceReport.series.slice(-14)}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                        <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickFormatter={d => d.slice(-5)} />
-                        <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                        <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} />
-                        <Bar dataKey="granted" fill="#22c55e" radius={[4, 4, 0, 0]} name="Check-ins" />
-                        <Bar dataKey="denied" fill="#ef4444" radius={[4, 4, 0, 0]} name="Denied" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReportCharts type="attendance" data={attendanceReport} />
                   ) : <div className="empty-state"><BarChart3 size={24} /><p>No attendance data</p></div>}
                 </div>
               </div>
@@ -115,33 +112,13 @@ export default function ReportsPage() {
                 <div className="card">
                   <div className="card-header"><h3><TrendingUp size={18} style={{ color: 'var(--accent-primary)', marginRight: '0.5rem' }} />Monthly Revenue</h3></div>
                   {revenueData.series.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <LineChart data={revenueData.series}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                        <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                        <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={v => `${(v/100).toLocaleString()}`} />
-                        <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} formatter={v => formatCurrency(v)} />
-                        <Line type="monotone" dataKey="membership" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981' }} name="Membership" />
-                        <Line type="monotone" dataKey="product" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6' }} name="Products" />
-                        <Legend />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    <ReportCharts type="revenue" data={revenueData} formatCurrency={formatCurrency} />
                   ) : <div className="empty-state"><BarChart3 size={24} /><p>No revenue data yet</p></div>}
                 </div>
                 <div className="card">
                   <div className="card-header"><h3>Revenue Split</h3></div>
                   {revenueData.totalRevenue > 0 ? (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <PieChart>
-                        <Pie data={[
-                          { name: 'Membership', value: revenueData.totalMembership },
-                          { name: 'Products', value: revenueData.totalProduct },
-                        ]} cx="50%" cy="50%" outerRadius={90} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                          {[0, 1].map(i => <Cell key={i} fill={CHART_COLORS[i]} />)}
-                        </Pie>
-                        <Tooltip formatter={v => formatCurrency(v)} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <ReportCharts type="split" data={revenueData} formatCurrency={formatCurrency} />
                   ) : <div className="empty-state"><BarChart3 size={24} /><p>No data</p></div>}
                 </div>
               </div>
@@ -187,17 +164,7 @@ export default function ReportsPage() {
                 <div className="card-header"><h3><Activity size={18} style={{ color: 'var(--accent-primary)', marginRight: '0.5rem' }} />Staff Performance This Month</h3></div>
                 {staffData.length > 0 ? (
                   <>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={staffData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                        <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                        <YAxis dataKey="fullName" type="category" width={120} tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
-                        <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8 }} />
-                        <Bar dataKey="checkins" fill="#22c55e" name="Check-ins" radius={[0, 4, 4, 0]} />
-                        <Bar dataKey="sales" fill="#3b82f6" name="Sales" radius={[0, 4, 4, 0]} />
-                        <Legend />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <ReportCharts type="staff" data={staffData} />
                     <div className="table-wrapper" style={{ marginTop: '1rem' }}>
                       <table>
                         <thead><tr><th>Staff</th><th>Role</th><th>Check-ins</th><th>Sales</th><th>Sales Revenue</th></tr></thead>
