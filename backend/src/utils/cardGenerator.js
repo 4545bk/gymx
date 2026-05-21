@@ -127,7 +127,12 @@ async function generateMemberCard(member, settings) {
     // 3. Fetch logo (if available and renderable — skip SVG)
     let logoBuffer = null;
     if (settings.cardShowLogo !== false && settings.logoUrl) {
+      const logoUrlPreview = settings.logoUrl.substring(0, 60);
+      console.log('[CARD] Logo URL type:', logoUrlPreview + '...');
       logoBuffer = await fetchImageBuffer(settings.logoUrl);
+      console.log('[CARD] Logo buffer:', logoBuffer ? `${logoBuffer.length} bytes` : 'null (skipped/SVG)');
+    } else {
+      console.log('[CARD] Logo skipped:', settings.cardShowLogo === false ? 'disabled in settings' : 'no logoUrl');
     }
 
     // 4. Issue date
@@ -188,10 +193,13 @@ async function generateMemberCard(member, settings) {
       try {
         doc.image(logoBuffer, logoX, logoY, { width: logoSize, height: logoSize });
         textStartX = logoX + logoSize + 6;
+        console.log('[CARD] Logo embedded successfully');
       } catch (e) {
-        // Logo rendering failed, skip it
+        console.error('[CARD] Logo embed failed:', e.message);
         textStartX = 16;
       }
+    } else {
+      console.log('[CARD] No logo buffer — text-only header');
     }
 
     // Gym name (left-aligned, bold)
