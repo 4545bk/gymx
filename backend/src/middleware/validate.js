@@ -9,6 +9,10 @@
 // ─── Sanitize strings recursively ────────────────────────
 function sanitize(obj) {
   if (typeof obj === 'string') {
+    // Do not sanitize base64 data URIs as they contain slashes and binary payload
+    if (obj.startsWith('data:')) {
+      return obj;
+    }
     return obj
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
