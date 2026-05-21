@@ -55,5 +55,5 @@ const start = async () => {
 
 start().catch((err) => {
   console.error('Failed to start server:', err);
-  process.exit(1);
+  setTimeout(() => process.exit(1), 1000);
 });

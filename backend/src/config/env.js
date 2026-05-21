@@ -19,17 +19,17 @@ if (missing.length > 0) {
   console.error('FATAL: Missing required environment variables:');
   missing.forEach((key) => console.error(`  • ${key}`));
   console.error('──────────────────────────────────────────────────');
-  process.exit(1);
+  setTimeout(() => process.exit(1), 1000);
 }
 
 // Validate minimum secret lengths
 if (process.env.JWT_SECRET.length < 32) {
   console.error('FATAL: JWT_SECRET must be at least 32 characters.');
-  process.exit(1);
+  setTimeout(() => process.exit(1), 1000);
 }
 if (process.env.JWT_REFRESH_SECRET.length < 32) {
   console.error('FATAL: JWT_REFRESH_SECRET must be at least 32 characters.');
-  process.exit(1);
+  setTimeout(() => process.exit(1), 1000);
 }
 
 module.exports = {
