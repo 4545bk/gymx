@@ -56,12 +56,15 @@ function fetchImageBuffer(url) {
       // Handle ALL data: URIs (not just data:image/)
       if (url.startsWith('data:')) {
         try {
+          // Only check MIME type (before the comma), NOT the base64 payload
+          const mimeHeader = url.split(',')[0].toLowerCase(); // e.g. "data:image/png;base64"
+
           // PDFKit can't render SVG directly, skip
-          if (url.includes('svg+xml') || url.includes('svg')) {
+          if (mimeHeader.includes('svg')) {
             return resolve(null);
           }
           // Only process image data URIs
-          if (!url.includes('image/')) {
+          if (!mimeHeader.includes('image/')) {
             return resolve(null);
           }
           const base64Data = url.split(',')[1];
@@ -75,12 +78,17 @@ function fetchImageBuffer(url) {
         return resolve(null);
       }
 
-      // Handle HTTP/HTTPS URLs
+      // Handle HTTP/HTTPS URLs (Cloudinary, etc.)
       const client = url.startsWith('https') ? https : http;
-      const req = client.get(url, { timeout: 5000 }, (res) => {
+      const req = client.get(url, { timeout: 8000 }, (res) => {
+        // Follow redirects (3xx)
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          fetchImageBuffer(res.headers.location).then(resolve);
+          return;
+        }
         if (res.statusCode !== 200) return resolve(null);
         const ct = (res.headers['content-type'] || '').toLowerCase();
-        if (!ct.includes('png') && !ct.includes('jpeg') && !ct.includes('jpg')) return resolve(null);
+        if (!ct.includes('image/')) return resolve(null);
         const chunks = [];
         res.on('data', (chunk) => chunks.push(chunk));
         res.on('end', () => resolve(Buffer.concat(chunks)));

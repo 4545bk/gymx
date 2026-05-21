@@ -5,6 +5,7 @@ const Settings = require('../../models/Settings');
 const MembershipPlan = require('../../models/MembershipPlan');
 const AuditLog = require('../../models/AuditLog');
 const mongoose = require('mongoose');
+const { uploadImage, isConfigured: cloudinaryConfigured } = require('../../utils/cloudinary');
 
 // ═════════════════════════════════════════════════════════
 // SETTINGS
@@ -23,6 +24,21 @@ const updateSettings = async (data, staffId, staffName) => {
   const current = await getSettings();
   const before = { ...current };
   delete before._id; delete before.__v; delete before.id;
+
+  // Upload logo to Cloudinary if it's a base64 data URI
+  if (data.logoUrl && data.logoUrl.startsWith('data:image/') && cloudinaryConfigured()) {
+    console.log('[SETTINGS] Uploading logo to Cloudinary...');
+    const cloudUrl = await uploadImage(data.logoUrl, {
+      folder: 'gymx/logos',
+      publicId: 'gym-logo',
+      width: 400,
+      height: 400,
+    });
+    if (cloudUrl) {
+      data.logoUrl = cloudUrl;
+      console.log('[SETTINGS] Logo uploaded:', cloudUrl);
+    }
+  }
 
   const settings = await Settings.findOneAndUpdate(
     { gymId: 'default' },

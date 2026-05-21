@@ -6,6 +6,7 @@ const { generateMemberCard } = require('../../utils/cardGenerator');
 const Member = require('../../models/Member');
 const Settings = require('../../models/Settings');
 const AuditLog = require('../../models/AuditLog');
+const { uploadImage, deleteImage, isConfigured: cloudinaryConfigured } = require('../../utils/cloudinary');
 
 const create = async (req, res, next) => {
   try {
@@ -133,12 +134,13 @@ const downloadCard = async (req, res, next) => {
 };
 
 /**
- * Upload or update member photo (base64 data URI).
+ * Upload or update member photo.
  * Accepts { photoUrl: "data:image/jpeg;base64,..." }
+ * Automatically uploads to Cloudinary if configured.
  */
 const uploadPhoto = async (req, res, next) => {
   try {
-    const { photoUrl } = req.body;
+    let { photoUrl } = req.body;
     if (!photoUrl && photoUrl !== null) {
       return res.status(400).json({ success: false, error: { message: 'photoUrl is required' } });
     }
@@ -148,6 +150,21 @@ const uploadPhoto = async (req, res, next) => {
       const err = new Error('Member not found');
       err.statusCode = 404;
       throw err;
+    }
+
+    // Upload to Cloudinary if configured and it's a base64 data URI
+    if (photoUrl && photoUrl.startsWith('data:image/') && cloudinaryConfigured()) {
+      // Delete old Cloudinary photo if exists
+      if (member.photoUrl && member.photoUrl.includes('res.cloudinary.com')) {
+        await deleteImage(member.photoUrl);
+      }
+      const cloudUrl = await uploadImage(photoUrl, {
+        folder: 'gymx/members',
+        publicId: `member-${member.memberId}`,
+        width: 300,
+        height: 300,
+      });
+      if (cloudUrl) photoUrl = cloudUrl;
     }
 
     member.photoUrl = photoUrl;
