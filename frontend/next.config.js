@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 let nextConfig = {
   reactStrictMode: false,
-  distDir: '.next_fresh',
+  distDir: process.env.VERCEL ? '.next' : '.next_fresh',
   
   // Image optimization
   images: {
