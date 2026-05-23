@@ -14,6 +14,9 @@
  */
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
+const https = require('https');
+const http = require('http');
+const Settings = require('../models/Settings');
 
 // ─── Receipt dimensions ──────────────────────────────────
 const PAGE_WIDTH = 595.28;   // A4 width (points)
@@ -55,21 +58,110 @@ function generateReceiptNumber(paymentId, recordedAt) {
   return `RCP-${dateStr}-${suffix}`;
 }
 
+// ─── Fetch image from URL or base64 data URI as Buffer ─
+function fetchImageBuffer(url) {
+  return new Promise((resolve) => {
+    try {
+      if (!url) return resolve(null);
+
+      // Trim any whitespace
+      url = String(url).trim();
+
+      // Handle ALL data: URIs (not just data:image/)
+      if (url.startsWith('data:')) {
+        try {
+          // Only check MIME type (before the comma), NOT the base64 payload
+          const mimeHeader = url.split(',')[0].toLowerCase(); // e.g. "data:image/png;base64"
+
+          // PDFKit can't render SVG directly, skip
+          if (mimeHeader.includes('svg')) {
+            return resolve(null);
+          }
+          // Only process image data URIs
+          if (!mimeHeader.includes('image/')) {
+            return resolve(null);
+          }
+          const base64Data = url.split(',')[1];
+          if (!base64Data) return resolve(null);
+          return resolve(Buffer.from(base64Data, 'base64'));
+        } catch (e) { return resolve(null); }
+      }
+
+      // Only allow http/https URLs
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return resolve(null);
+      }
+
+      // Handle HTTP/HTTPS URLs (Cloudinary, etc.)
+      const client = url.startsWith('https') ? https : http;
+      const req = client.get(url, { timeout: 8000 }, (res) => {
+        // Follow redirects (3xx)
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          fetchImageBuffer(res.headers.location).then(resolve);
+          return;
+        }
+        if (res.statusCode !== 200) return resolve(null);
+        const ct = (res.headers['content-type'] || '').toLowerCase();
+        if (!ct.includes('image/')) return resolve(null);
+        const chunks = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.on('end', () => resolve(Buffer.concat(chunks)));
+        res.on('error', () => resolve(null));
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+    } catch (e) {
+      // Catch any synchronous errors (e.g. invalid URL protocol)
+      resolve(null);
+    }
+  });
+}
+
 // ─── Draw Header ─────────────────────────────────────────
-function drawHeader(doc, x, y) {
+function drawHeader(doc, x, y, logoBuffer, settings = {}) {
   // Brand bar
   doc.rect(x, y, RECEIPT_W, 50).fill(C.brand);
-  doc.font('Helvetica-Bold').fontSize(20).fillColor('white');
-  doc.text('GymX', x, y + 12, { width: RECEIPT_W, align: 'center' });
-  doc.font('Helvetica').fontSize(7).fillColor('#8ab4d8');
-  doc.text('GYM MANAGEMENT SYSTEM', x, y + 34, { width: RECEIPT_W, align: 'center' });
+  
+  const gymName = settings.gymName || 'GymX';
+  const tagline = settings.tagline || 'GYM MANAGEMENT SYSTEM';
+
+  if (logoBuffer) {
+    const logoSize = 30;
+    const logoX = x + MARGIN;
+    const logoY = y + (50 - logoSize) / 2; // vertically centered
+    
+    try {
+      doc.image(logoBuffer, logoX, logoY, { width: logoSize, height: logoSize });
+      const textStartX = logoX + logoSize + 10;
+      const textW = RECEIPT_W - (MARGIN * 2) - logoSize - 10;
+      
+      doc.font('Helvetica-Bold').fontSize(18).fillColor('white');
+      doc.text(gymName, textStartX, y + 12, { width: textW });
+      
+      doc.font('Helvetica').fontSize(7).fillColor('#8ab4d8');
+      doc.text(tagline.toUpperCase(), textStartX, y + 32, { width: textW });
+    } catch (e) {
+      console.error('[RECEIPT] Logo embed failed:', e.message);
+      drawCenteredHeader(doc, x, y, gymName, tagline);
+    }
+  } else {
+    drawCenteredHeader(doc, x, y, gymName, tagline);
+  }
   return y + 50;
 }
 
+function drawCenteredHeader(doc, x, y, gymName, tagline) {
+  doc.font('Helvetica-Bold').fontSize(20).fillColor('white');
+  doc.text(gymName, x, y + 12, { width: RECEIPT_W, align: 'center' });
+  doc.font('Helvetica').fontSize(7).fillColor('#8ab4d8');
+  doc.text(tagline.toUpperCase(), x, y + 34, { width: RECEIPT_W, align: 'center' });
+}
+
 // ─── Draw Footer ─────────────────────────────────────────
-function drawFooter(doc, x, y) {
+function drawFooter(doc, x, y, settings = {}) {
+  const footerText = settings.receiptFooter || 'Thank you for choosing GymX!';
   doc.font('Helvetica').fontSize(7).fillColor(C.secondary);
-  doc.text('Thank you for choosing GymX!', x + MARGIN, y, { width: COL_W, align: 'center' });
+  doc.text(footerText, x + MARGIN, y, { width: COL_W, align: 'center' });
   y += 12;
   doc.text('This is a computer-generated receipt. No signature required.', x + MARGIN, y, { width: COL_W, align: 'center' });
   return y + 12;
@@ -100,6 +192,13 @@ function drawInfoRow(doc, x, y, label, value) {
 async function generatePaymentReceipt(payment) {
   const receiptNumber = generateReceiptNumber(payment._id, payment.recordedAt);
 
+  // Fetch settings and logo
+  const settings = await Settings.findOne({ gymId: 'default' }).lean() || {};
+  let logoBuffer = null;
+  if (settings.logoUrl) {
+    logoBuffer = await fetchImageBuffer(settings.logoUrl);
+  }
+
   const qrBuffer = await QRCode.toBuffer(receiptNumber, {
     type: 'png', width: 200, margin: 1,
     color: { dark: C.brand, light: '#ffffff' },
@@ -118,7 +217,7 @@ async function generatePaymentReceipt(payment) {
   doc.rect(x, y - 10, RECEIPT_W, 500).strokeColor(C.border).lineWidth(0.5).stroke();
 
   // Header
-  y = drawHeader(doc, x, y - 10);
+  y = drawHeader(doc, x, y - 10, logoBuffer, settings);
   y += 15;
 
   // Receipt title
@@ -188,7 +287,7 @@ async function generatePaymentReceipt(payment) {
   y += 14;
 
   y = drawDivider(doc, x, y, true);
-  drawFooter(doc, x, y);
+  drawFooter(doc, x, y, settings);
 
   doc.end();
   return { stream: doc, filename: `GymX_Receipt_${receiptNumber}.pdf`, receiptNumber };
@@ -198,6 +297,13 @@ async function generatePaymentReceipt(payment) {
 // PRODUCT SALE RECEIPT
 // ═════════════════════════════════════════════════════════
 async function generateSaleReceipt(sale) {
+  // Fetch settings and logo
+  const settings = await Settings.findOne({ gymId: 'default' }).lean() || {};
+  let logoBuffer = null;
+  if (settings.logoUrl) {
+    logoBuffer = await fetchImageBuffer(settings.logoUrl);
+  }
+
   const qrBuffer = await QRCode.toBuffer(sale.saleNumber, {
     type: 'png', width: 200, margin: 1,
     color: { dark: C.brand, light: '#ffffff' },
@@ -213,7 +319,7 @@ async function generateSaleReceipt(sale) {
   let y = 60;
 
   // Header
-  y = drawHeader(doc, x, y);
+  y = drawHeader(doc, x, y, logoBuffer, settings);
   y += 15;
 
   // Receipt title
@@ -297,7 +403,7 @@ async function generateSaleReceipt(sale) {
   y += 14;
 
   y = drawDivider(doc, x, y, true);
-  drawFooter(doc, x, y);
+  drawFooter(doc, x, y, settings);
 
   doc.end();
   return { stream: doc, filename: `GymX_Receipt_${sale.saleNumber}.pdf` };
