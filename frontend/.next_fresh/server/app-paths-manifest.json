@@ -1,6 +1,1 @@
-{
-  "/checkin/page": "app/checkin/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/members/page": "app/members/page.js",
-  "/inventory/page": "app/inventory/page.js"
-}
+{}

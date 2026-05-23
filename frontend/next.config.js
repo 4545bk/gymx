@@ -19,7 +19,6 @@ let nextConfig = {
     // and recharts, which causes webpack module factory race conditions.
     // Override with empty array to disable ALL automatic optimizations.
     optimizePackageImports: [],
-    optimizeCss: true,
   },
 
   async rewrites() {
