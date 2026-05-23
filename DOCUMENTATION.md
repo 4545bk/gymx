@@ -828,6 +828,15 @@ Base URL: `/api/v1`
 - **Zero Flash On Load**: An inline script in the HTML layout reads the saved theme from `localStorage` (`gymx-theme`) and immediately sets the `data-theme` attribute on the root element before rendering, preventing any flash of incorrect theme style.
 - **CSS Variable styling**: High-fidelity dark variables and glassmorphism styling are applied using the `[data-theme="dark"]` selector in the `globals.css` design system.
 
+### 8.12 Offline & Network Resilience for QR Check-In
+To prevent check-in failures during internet outages or backend downtime, GymX implements a comprehensive offline-first resilience architecture:
+- **Offline Member Cache**: Active members' profiles, membership plan types, and expiry dates are synchronized from the backend and cached locally in browser IndexedDB (`offlineDB.js`).
+- **Local QR Access Decisions**: If the backend is unreachable, the system automatically switches to offline verification, matching scanned QR codes against the local IndexedDB cache to make instant "Granted" or "Denied" decisions.
+- **IndexedDB Sync Queue**: Offline check-in records are queued locally in IndexedDB.
+- **Service Worker Background Sync**: A custom Service Worker (`sw.js`) intercepts synchronization triggers, utilizing the browser's native Background Sync API to automatically upload the queued check-ins once internet connectivity is restored.
+- **Custom Fallback Polling Queue**: For browsers lacking Background Sync support, a robust polling fallback queue (`checkinQueue.js`) checks network status and retries uploading pending check-ins periodically.
+- **Resilient SSE with Polling Fallback**: The live receptionist feed (`resilientSSE.js`) handles server-sent events with exponential backoff auto-reconnects, automatically falling back to HTTP GET polling of today's check-ins every 10s if the SSE stream is disconnected.
+- **Receptionist Dashboard Banner & Indicators**: An amber status banner alerts staff when the system is offline, and a synchronization badge displays the count of unsynced offline records with a manual "Sync Now" trigger button.
 
 ---
 
@@ -936,6 +945,8 @@ All monetary values are stored in **cents** (smallest currency unit).
 | **Background Jobs** | node-cron for expiry sync, overdue detection |
 | **Multi-Branch Scoping** | `branchFilter` middleware scoping all database queries by `branchId` |
 | **Cloud Storage CDN** | `cloudinary.js` uploading logo/photos to offload MongoDB binary storage |
+| **Offline-First Queue** | IndexedDB (`offlineDB.js`) & Service Worker (`sw.js`) background sync for offline QR check-ins |
+| **Resilient SSE Connection** | `resilientSSE.js` reconnecting with exponential backoff & falling back to HTTP polling |
 
 ---
 

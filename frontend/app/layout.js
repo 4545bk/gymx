@@ -1,6 +1,6 @@
+// Cache invalidation trigger
 import './globals.css';
 import Providers from '@/components/Providers';
-import ErrorBoundary from '@/components/ErrorBoundary';
 
 export const metadata = {
   title: 'GymX — Gym Management System',
@@ -48,11 +48,9 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body suppressHydrationWarning>
-        <ErrorBoundary>
-          <Providers>
-            {children}
-          </Providers>
-        </ErrorBoundary>
+        <Providers>
+          {children}
+        </Providers>
         {process.env.NODE_ENV === 'development' ? (
           <script
             dangerouslySetInnerHTML={{

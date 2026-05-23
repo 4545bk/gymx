@@ -5,6 +5,7 @@ import { I18nProvider } from '@/lib/i18n';
 import { BranchProvider } from '@/lib/branchContext';
 import { ToastProvider } from '@/components/Toast';
 import OfflineBanner from '@/components/ui/OfflineBanner';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 /**
  * Client-side providers wrapper.
@@ -19,7 +20,9 @@ export default function Providers({ children }) {
         <BranchProvider>
           <ToastProvider>
             <OfflineBanner />
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </ToastProvider>
         </BranchProvider>
       </I18nProvider>
