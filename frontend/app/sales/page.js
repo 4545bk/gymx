@@ -122,7 +122,7 @@ export default function SalesPage() {
     }>
       {view === 'pos' ? (
         /* ─── POS View ──────────────────────────────────── */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '1.5rem', minHeight: '60vh' }}>
+        <div className="pos-grid">
           {/* Product Grid */}
           <div>
             <input className="form-input" placeholder="Search products..." value={searchProduct} onChange={(e) => setSearchProduct(e.target.value)} style={{ marginBottom: '1rem' }} />

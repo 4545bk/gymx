@@ -1253,3 +1253,31 @@ tr:last-child td { border-bottom: none; }
     background: #ececea !important;
   }
 }
+
+/* ─── Dashboard Custom Responsive Layouts ─────────────────── */
+.dashboard-grid-2 {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── POS Custom Responsive Layout ────────────────────────── */
+.pos-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 1.5rem;
+  min-height: 60vh;
+}
+
+@media (max-width: 1024px) {
+  .pos-grid {
+    grid-template-columns: 1fr;
+  }
+}

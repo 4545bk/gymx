@@ -164,12 +164,7 @@ export default function DashboardPage() {
           </div>
 
           {/* ─── Stat Cards ───────────────────────────────── */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 16,
-            marginBottom: 24,
-          }}>
+          <div className="stats-grid">
             <StatCard
               label={t('dashboard.activeMembers')}
               value={stats?.totalActive || 0}
@@ -228,12 +223,7 @@ export default function DashboardPage() {
           )}
 
           {/* ─── Charts Section ───────────────────────────── */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1.5fr 1fr',
-            gap: 16,
-            marginBottom: 24,
-          }}>
+          <div className="dashboard-grid-2">
             {/* Revenue Trend */}
             <div style={{
               background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -436,13 +426,13 @@ function DashboardSkeleton() {
         <div className="skeleton" style={{ height: 16, width: 260, borderRadius: 'var(--radius-sm)' }} />
       </div>
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="stats-grid">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="skeleton" style={{ height: 100, borderRadius: 'var(--radius-lg)' }} />
         ))}
       </div>
       {/* Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16, marginBottom: 24 }}>
+      <div className="dashboard-grid-2">
         <div className="skeleton" style={{ height: 300, borderRadius: 'var(--radius-lg)' }} />
         <div className="skeleton" style={{ height: 300, borderRadius: 'var(--radius-lg)' }} />
       </div>
