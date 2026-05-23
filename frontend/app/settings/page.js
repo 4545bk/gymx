@@ -6,6 +6,7 @@ import { Save, Plus, Trash2, Download, Upload, Shield, AlertTriangle, Calendar, 
 import Skeleton from '@/components/ui/Skeleton';
 import { getDateFormat, setDateFormat } from '@/lib/ethiopianDate';
 import { fmtETB } from '@/lib/currency';
+import { useToast } from '@/components/Toast';
 
 export default function SettingsPage() {
   const [tab, setTab] = useState('general'); // general | plans | branches | backup
@@ -38,6 +39,7 @@ export default function SettingsPage() {
 // GENERAL SETTINGS TAB
 // ═══════════════════════════════════════════════════════════
 function GeneralSettings() {
+  const toast = useToast();
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,7 +56,7 @@ function GeneralSettings() {
       await api.put('/settings', data);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (err) { alert('Failed to save settings'); }
+    } catch (err) { toast.error('Failed to save settings'); }
     finally { setSaving(false); }
   };
 
@@ -240,6 +242,7 @@ function DateFormatSelector() {
 // MEMBERSHIP PLANS TAB
 // ═══════════════════════════════════════════════════════════
 function PlansSettings() {
+  const toast = useToast();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -263,7 +266,7 @@ function PlansSettings() {
     try {
       await api.put(`/settings/plans/${plan._id}`, { status: plan.status === 'active' ? 'inactive' : 'active' });
       fetchPlans();
-    } catch (err) { alert('Failed to update plan'); }
+    } catch (err) { toast.error('Failed to update plan'); }
   };
 
   if (loading) return <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{[...Array(3)].map((_, i) => <Skeleton key={i} height={72} borderRadius="var(--radius-md)" />)}</div>;
@@ -444,6 +447,7 @@ function PlanModal({ plan, onClose, onSuccess }) {
 // BACKUP & RESTORE TAB
 // ═══════════════════════════════════════════════════════════
 function BackupSettings() {
+  const toast = useToast();
   const [creatingBackup, setCreatingBackup] = useState(false);
   const [restoreFile, setRestoreFile] = useState(null);
   const [restorePreview, setRestorePreview] = useState(null);
@@ -463,7 +467,7 @@ function BackupSettings() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (err) { alert('Backup failed'); }
+    } catch (err) { toast.error('Backup failed'); }
     finally { setCreatingBackup(false); }
   };
 
@@ -497,7 +501,7 @@ function BackupSettings() {
       const { data: result } = await api.post('/settings/restore', data);
       setRestoreResult(result.data);
       setConfirmRestore(false);
-    } catch (err) { alert('Restore failed: ' + (err.response?.data?.error?.message || err.message)); }
+    } catch (err) { toast.error('Restore failed: ' + (err.response?.data?.error?.message || err.message)); }
     finally { setRestoring(false); }
   };
 
@@ -583,6 +587,7 @@ function BackupSettings() {
 // BRANCHES TAB — Multi-location management
 // ═══════════════════════════════════════════════════════════
 function BranchesSettings() {
+  const toast = useToast();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -608,7 +613,7 @@ function BranchesSettings() {
       setShowAdd(false);
       setForm({ name: '', address: '', phone: '', isHeadquarters: false });
       fetchBranches();
-    } catch (err) { alert(err.response?.data?.error?.message || 'Failed to add branch'); }
+    } catch (err) { toast.error(err.response?.data?.error?.message || 'Failed to add branch'); }
     finally { setSaving(false); }
   };
 
@@ -617,7 +622,7 @@ function BranchesSettings() {
       await api.put(`/branches/${id}`, updates);
       fetchBranches();
       setEditBranch(null);
-    } catch (err) { alert('Failed to update branch'); }
+    } catch (err) { toast.error('Failed to update branch'); }
   };
 
   const handleRegenKey = async (id) => {
@@ -625,7 +630,7 @@ function BranchesSettings() {
     try {
       await api.post(`/branches/${id}/regenerate-key`);
       fetchBranches();
-    } catch (err) { alert('Failed to regenerate key'); }
+    } catch (err) { toast.error('Failed to regenerate key'); }
   };
 
   const copyKey = (key) => {

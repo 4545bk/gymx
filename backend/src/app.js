@@ -18,7 +18,7 @@ app.use(cors({
   origin: true, // Allow all origins — auth is handled by JWT, not CORS
   credentials: true, // Required for HTTP-only refresh token cookies
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-scanner-key', 'x-branch-id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-scanner-key', 'x-branch-id', 'x-skip-cache'],
 }));
 
 // ─── Body Parsing ────────────────────────────────────────────

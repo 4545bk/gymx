@@ -4,9 +4,11 @@ import ProtectedLayout from '@/components/ProtectedLayout';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { ShoppingCart, Plus, Minus, Trash2, Receipt, X, FileText } from 'lucide-react';
+import { useToast } from '@/components/Toast';
 
 export default function SalesPage() {
   const { staff } = useAuth();
+  const toast = useToast();
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [sales, setSales] = useState([]);
@@ -51,7 +53,7 @@ export default function SalesPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (err) { console.error(err); alert('Failed to download receipt.'); }
+    } catch (err) { console.error(err); toast.error('Failed to download receipt.'); }
   };
 
   // ─── Cart Logic ────────────────────────────────────────
@@ -100,7 +102,7 @@ export default function SalesPage() {
       // Refresh products to update stock
       api.get('/products?limit=100&status=active').then(res => setProducts(res.data.data || []));
     } catch (err) {
-      alert(err.response?.data?.error?.message || 'Sale failed');
+      toast.error(err.response?.data?.error?.message || 'Sale failed');
     }
     finally { setSubmitting(false); }
   };
