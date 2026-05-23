@@ -13,11 +13,11 @@ const Sale = require('../../models/Sale');
 const Product = require('../../models/Product');
 const InventoryMovement = require('../../models/InventoryMovement');
 const AuditLog = require('../../models/AuditLog');
-const { nowAddis } = require('../../utils/dateHelpers');
+const { nowLocal } = require('../../utils/dateHelpers');
 
 // ─── Generate Sale Number ────────────────────────────────
 const generateSaleNumber = async () => {
-  const today = nowAddis();
+  const today = nowLocal();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
   const prefix = `SL-${dateStr}`;
 
@@ -116,7 +116,7 @@ const createSale = async (data, staffId, staffName) => {
     notes,
     soldBy: staffId,
     soldByName: staffName,
-    saleDate: nowAddis(),
+    saleDate: nowLocal(),
   });
 
   // 5. Create inventory movement records

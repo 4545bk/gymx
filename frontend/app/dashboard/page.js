@@ -136,7 +136,7 @@ export default function DashboardPage() {
   return (
     <ProtectedLayout>
       {loading ? <DashboardSkeleton /> : (
-        <div style={{ maxWidth: 1200 }}>
+        <div style={{ width: '100%' }}>
 
           {/* ─── Page Header ──────────────────────────────── */}
           <div style={{ marginBottom: 28 }}>
@@ -429,7 +429,7 @@ function StatCard({ label, value, trend, trendUp, subtext, accent = '#1A5C3A' })
    ═══════════════════════════════════════════════════════════ */
 function DashboardSkeleton() {
   return (
-    <div style={{ maxWidth: 1200 }}>
+    <div style={{ width: '100%' }}>
       {/* Header skeleton */}
       <div style={{ marginBottom: 28 }}>
         <div className="skeleton" style={{ height: 36, width: 320, borderRadius: 'var(--radius-md)', marginBottom: 8 }} />

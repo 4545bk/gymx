@@ -90,6 +90,7 @@ const getDateStringForTimestamp = (isoString) => {
 
 module.exports = {
   nowLocal,
+  nowAddis: nowLocal,
   getTodayDateString,
   getTodayWeekday,
   computeExpiryDate,
